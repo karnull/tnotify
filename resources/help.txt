@@ -1,0 +1,44 @@
+tnotify - tmux notification manager
+
+SYNOPSIS
+  tnotify [-h | -v | --skill | --config | --defaults]
+  tnotify notify <body> [--head <heading>] [--author <name>]
+                        [--interactive [<option>...] [--custom] [--multiple]]
+  tnotify show [--all | --last]
+  tnotify --clear [--all | <index>...]
+
+OPTIONS
+  -h, --help                 Print this help documentation and exit
+  -v, --version              Print version information and exit
+  --skill                    Display or configure skill settings
+  --config                   Print the config path, creating it from the
+                             defaults when there is none
+  --defaults                 Back up the current config and write the defaults
+
+COMMANDS
+  notify <body>              Send a notification, <body> being its message
+    --head <heading>         Heading shown above the message
+    --author <name>          Who sent it; defaults to $TNOTIFY_AUTHOR, else the
+                             calling script or program
+    --interactive [<option>...]
+                             Offer options to pick from; the chosen one is
+                             printed in the original terminal
+    --custom                 Add a text box to type an answer in; requires
+                             --interactive
+    --multiple               Select several options with space; requires
+                             --interactive
+
+  show                       Display the notification history
+    --all                    Show every notification, in a side panel
+    --last                   Show only the most recent notification
+
+  --clear [<index>...]       Clear notification items, each <index> being a
+                             number or a range (e.g. 1 2 3-5)
+    --all                    Clear the entire notification history
+
+ENVIRONMENT
+  TNOTIFY_AUTHOR             Name recorded as the sender when --author is
+                             not given
+
+FILES
+  ~/.config/tnotify/config.toml

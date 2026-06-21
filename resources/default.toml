@@ -1,0 +1,27 @@
+[colors]
+border    = "#554040"
+head      = "#45E00B"
+message   = "#DDDDDD"
+author    = "#0BE0CE"
+# Options ticked with space under --multiple.
+selection = "#ED0800"
+# Set footer to "<hidden>" to drop the key hints from the bottom of the popup.
+footer    = "#874BFD"
+
+[sidepanel]
+direction = "right"
+width     = 40
+
+[overlay]
+# location: <top|middle|bottom>-<left|center|right>
+location   = "top-right"
+timeout    = 0
+# The popup is sized to the message, in columns and rows. It starts at
+# min_width/min_height and widens towards max_width first; only once that is
+# not enough does it grow taller, up to max_height. A zero bound means no
+# limit beyond the size of the terminal.
+min_width  = 40
+max_width  = 80
+min_height = 0
+max_height = 0
+
