@@ -1,0 +1,11 @@
+# .gitignore
+
+# misc
+**/*.swp
+**/*.swo
+**/.tags
+**/*~
+
+# distribution / packaging
+build/
+*.db
