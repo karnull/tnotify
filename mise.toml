@@ -3,6 +3,7 @@ go = "latest"
 "go:golang.org/x/tools/gopls" = "latest"
 
 [shell_alias]
-run   = 'go run cmd/tnotify/tnotify.go'
+run   = 'parent; go run cmd/tnotify/tnotify.go'
+build = 'parent; go build cmd/tnotify/tnotify.go'
 debug = ''
 
