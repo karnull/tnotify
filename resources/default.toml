@@ -9,6 +9,7 @@ selection = "#ED0800"
 footer    = "#874BFD"
 
 [sidepanel]
+# direction: <left|right>
 direction = "right"
 width     = 40
 
