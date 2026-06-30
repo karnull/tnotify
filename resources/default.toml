@@ -3,7 +3,7 @@ border    = "#554040"
 head      = "#45E00B"
 message   = "#DDDDDD"
 author    = "#0BE0CE"
-# Options ticked with space under --multiple.
+# The option under the cursor, and any ticked with space under --multiple.
 selection = "#ED0800"
 # Set footer to "<hidden>" to drop the key hints from the bottom of the popup.
 footer    = "#874BFD"
