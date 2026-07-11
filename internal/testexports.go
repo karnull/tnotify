@@ -10,12 +10,16 @@ package internal
 //- Constants --------------------------------------------------------------------------------------
 
 const (
+	AuthorEnvVar  = authorEnvVar
 	OverlayBorder = overlayBorder
 )
 
 //- Functions --------------------------------------------------------------------------------------
 
 var (
+	DefaultAuthor = defaultAuthor
+	ParentName    = parentName
+	ScriptArg     = scriptArg
 	FitOverlay    = fitOverlay
 	OverlayBounds = overlayBounds
 	PlaceOverlay  = placeOverlay
