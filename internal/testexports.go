@@ -24,4 +24,5 @@ var (
 	OverlayBounds = overlayBounds
 	PlaceOverlay  = placeOverlay
 	ParseLocation = parseLocation
+	ParseNotify   = parseNotify
 )
