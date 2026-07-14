@@ -90,24 +90,36 @@ func TestParseNotify(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/internal_parse_test.go
 <<<<<<<< HEAD:pkg/internal_parse_test.go
 ========
+=======
+>>>>>>> c39272c (feat: route the command line to commands and flags):test/internal_parse_test.go
 // A flag show does not know is a slip worth stopping on, since opening the
 // default overlay instead looks like the flag did something.
 func TestShowModeRejectsUnknownFlags(t *testing.T) {
 	for _, args := range [][]string{{"--nonsense"}, {"--everything"}, {"--all", "--nonsense"}} {
+<<<<<<< HEAD:pkg/internal_parse_test.go
 		if _, err := showMode(args); err == nil {
+=======
+		if _, err := internal.ShowMode(args); err == nil {
+>>>>>>> c39272c (feat: route the command line to commands and flags):test/internal_parse_test.go
 			t.Errorf("showMode(%q) succeeded, want an error", args)
 		}
 	}
 
 	for _, args := range [][]string{nil, {"--all"}, {"--last"}} {
+<<<<<<< HEAD:pkg/internal_parse_test.go
 		if _, err := showMode(args); err != nil {
+=======
+		if _, err := internal.ShowMode(args); err != nil {
+>>>>>>> c39272c (feat: route the command line to commands and flags):test/internal_parse_test.go
 			t.Errorf("showMode(%q) returned error: %v", args, err)
 		}
 	}
 }
 
+<<<<<<< HEAD:pkg/internal_parse_test.go
 // --timeout says how long the caller will hold, and asking for a limit is only
 // ever asking to wait up to it.
 func TestParseNotifyTimeout(t *testing.T) {
@@ -138,6 +150,8 @@ func TestParseNotifyTimeout(t *testing.T) {
 }
 
 >>>>>>>> 4c5d5f9 (fixup! feat: read notify, show and clear command lines):internal/parse_test.go
+=======
+>>>>>>> c39272c (feat: route the command line to commands and flags):test/internal_parse_test.go
 func TestParseNotifyErrors(t *testing.T) {
 	tests := []struct {
 		name string
