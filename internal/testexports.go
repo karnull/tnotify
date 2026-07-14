@@ -11,6 +11,7 @@ package internal
 
 const (
 	AuthorEnvVar  = authorEnvVar
+	HiddenSetting = colorHidden
 	OverlayBorder = overlayBorder
 )
 
@@ -20,6 +21,7 @@ var (
 	DefaultAuthor = defaultAuthor
 	ParentName    = parentName
 	ScriptArg     = scriptArg
+	NotifyColors  = notifyColors
 	FitOverlay    = fitOverlay
 	OverlayBounds = overlayBounds
 	PlaceOverlay  = placeOverlay
