@@ -106,11 +106,6 @@ func resetConfig() {
 	fmt.Printf("wrote default config to %s\n", path)
 }
 
-// Report a failure to the user in the CLI's standard form.
-func reportError(err error) {
-	fmt.Fprintln(os.Stderr, "error:", err)
-}
-
 //- Public Calls -----------------------------------------------------------------------------------
 
 // Read the user's config file, falling back to the embedded default when they

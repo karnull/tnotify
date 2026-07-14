@@ -27,4 +27,5 @@ var (
 	PlaceOverlay  = placeOverlay
 	ParseLocation = parseLocation
 	ParseNotify   = parseNotify
+	ShowMode      = showMode
 )
