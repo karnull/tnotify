@@ -22,6 +22,19 @@ type Overlay struct {
 	Height int
 }
 
+// PaneInfo identifies the pane a notification was sent from. ID is tmux's own
+// pane identifier ("%3"), which stays with the pane however its window is
+// renamed or reordered; the session, window and index are there to describe it
+// to a person. Title is the title the pane was wearing before tnotify renamed
+// it, kept so it can be put back.
+type PaneInfo struct {
+	ID      string `json:"id"`
+	Session string `json:"session"`
+	Window  string `json:"window"`
+	Index   string `json:"index"`
+	Title   string `json:"title"`
+}
+
 //- Private Helpers --------------------------------------------------------------------------------
 
 // Return the path to the currently running tnotify binary, so a new tmux
@@ -125,4 +138,95 @@ func TmuxOverlay(overlay Overlay, env []string, args []string) error {
 	tmuxArgs = append(tmuxArgs, "-E")
 
 	return runSelfInTmux(tmuxArgs, args)
+}
+
+// Describe the pane this process is running in. Title is the pane's current
+// title, whatever that happens to be.
+func TmuxCurrentPane() (PaneInfo, error) {
+	if !tmux.IsInsideTmux() {
+		return PaneInfo{}, fmt.Errorf("not inside a tmux session")
+	}
+
+	// The session name and the title are the two fields that may contain a
+	// space, so they go last and are split off one at a time.
+	format := "#{pane_id} #{window_index} #{pane_index} #{session_name}"
+	stdout, stderr, err := tmux.RunCmd([]string{"display-message", "-p", format})
+	if err != nil {
+		return PaneInfo{}, fmt.Errorf("display-message: %v: %s", err, stderr)
+	}
+
+	fields := strings.SplitN(strings.TrimSpace(stdout), " ", 4)
+	if len(fields) < 4 {
+		return PaneInfo{}, fmt.Errorf("parsing pane info %q", strings.TrimSpace(stdout))
+	}
+
+	pane := PaneInfo{ID: fields[0], Window: fields[1], Index: fields[2], Session: fields[3]}
+
+	// Read the title separately rather than risk it running into the fields
+	// above, since a title is free-form text.
+	panes, err := TmuxPanes()
+	if err != nil {
+		return pane, err
+	}
+	pane.Title = panes[pane.ID]
+
+	return pane, nil
+}
+
+// Return every pane open on the tmux server, as pane id -> pane title. Panes
+// are listed rather than asked about one at a time so that a pane which has
+// been closed simply turns up missing, instead of as an error that has to be
+// told apart from tmux itself failing.
+func TmuxPanes() (map[string]string, error) {
+	if !tmux.IsInsideTmux() {
+		return nil, fmt.Errorf("not inside a tmux session")
+	}
+
+	stdout, stderr, err := tmux.RunCmd([]string{"list-panes", "-a", "-F", "#{pane_id} #{pane_title}"})
+	if err != nil {
+		return nil, fmt.Errorf("list-panes: %v: %s", err, stderr)
+	}
+
+	panes := map[string]string{}
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
+		if line == "" {
+			continue
+		}
+		// A title may contain spaces, and may be empty; the id never is.
+		id, title, _ := strings.Cut(line, " ")
+		panes[id] = title
+	}
+
+	return panes, nil
+}
+
+// Retitle a pane, without changing which pane is active. An empty title hands
+// the pane back to whatever tmux would name it by default.
+func TmuxRenamePane(id, title string) error {
+	if !tmux.IsInsideTmux() {
+		return fmt.Errorf("not inside a tmux session")
+	}
+
+	if _, stderr, err := tmux.RunCmd([]string{"select-pane", "-t", id, "-T", title}); err != nil {
+		return fmt.Errorf("select-pane: %v: %s", err, stderr)
+	}
+
+	return nil
+}
+
+// Type text into a pane as though the user had typed it there. Nothing is
+// entered afterwards, so the text lands on the pane's command line for whoever
+// is at it to use, rather than being run.
+func TmuxSendKeys(id, text string) error {
+	if !tmux.IsInsideTmux() {
+		return fmt.Errorf("not inside a tmux session")
+	}
+
+	// -l sends the text literally, so an answer that happens to read like a key
+	// name ("Enter", "C-c") is typed rather than pressed.
+	if _, stderr, err := tmux.RunCmd([]string{"send-keys", "-t", id, "-l", text}); err != nil {
+		return fmt.Errorf("send-keys: %v: %s", err, stderr)
+	}
+
+	return nil
 }

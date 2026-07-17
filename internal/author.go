@@ -77,18 +77,11 @@ func parentName() string {
 	return command
 }
 
-// Work out who is sending the notification when --author was not given.
-//
-// Nothing here knows about any particular tool: it reports whatever ran
-// tnotify, whether that is a program, a script, or a person at a shell. A
-// caller that wants to be named something else sets TNOTIFY_AUTHOR or passes
-// --author. This is only meaningful in the outer invocation — inside the tmux
-// popup the parent is tmux — so the outer process resolves it and passes it down.
-func defaultAuthor() string {
-	if name := strings.TrimSpace(os.Getenv(authorEnvVar)); name != "" {
-		return name
-	}
-
+// Whatever actually ran tnotify, ignoring anything the caller asked to be
+// named instead. Nothing here knows about any particular tool: it reports the
+// program, script or person that made the call. This is only meaningful in the
+// outer invocation — inside the tmux popup the parent is tmux.
+func trueAuthor() string {
 	if name := parentName(); name != "" {
 		return name
 	}
@@ -99,4 +92,16 @@ func defaultAuthor() string {
 	}
 
 	return "unknown"
+}
+
+// Work out who is sending the notification when --author was not given. A
+// caller that wants to be named something else sets TNOTIFY_AUTHOR or passes
+// --author; the true caller is recorded alongside either way. The outer process
+// resolves this and passes it down to the popup.
+func defaultAuthor() string {
+	if name := strings.TrimSpace(os.Getenv(authorEnvVar)); name != "" {
+		return name
+	}
+
+	return trueAuthor()
 }

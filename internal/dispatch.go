@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/karnull/tnotify/pkg"
 )
@@ -77,29 +78,140 @@ func buildNotification(req notifyRequest, cfg Config) pkg.Notification {
 		Author:   author,
 		Head:     req.Head,
 		Body:     req.Body,
-		Options:  req.Interactive,
+		Options:  req.Options,
 		Custom:   req.Custom,
 		Multiple: req.Multiple,
 		Colors:   notifyColors(cfg),
 	}
 }
 
-// Open a popup sized to the notification and return whatever the user picked
-// in there, which is empty when they dismissed it.
-func openNotifyOverlay(cfg Config, n pkg.Notification, args []string) (string, error) {
+// Restore a stored notification to the form the TUI draws. Its colours come
+// from the config as it stands now, not as it stood when it was sent.
+func storedNotificationView(stored storedNotification, cfg Config) pkg.Notification {
+	return pkg.Notification{
+		Author:   stored.Author,
+		Head:     stored.Head,
+		Body:     stored.Body,
+		Options:  stored.Options,
+		Custom:   stored.Custom,
+		Multiple: stored.Multiple,
+		Colors:   notifyColors(cfg),
+	}
+}
+
+// Rebuild the "notify" command line a stored notification came from, so the
+// popup can be handed the same arguments the original one was. --author is left
+// out because the overlay appends it itself.
+func storedNotificationArgs(stored storedNotification) []string {
+	args := []string{stored.Body}
+
+	if stored.Head != "" {
+		args = append(args, "--head", stored.Head)
+	}
+	if stored.Interactive {
+		args = append(args, "--interactive")
+		args = append(args, stored.Options...)
+	}
+	if stored.Custom {
+		args = append(args, "--custom")
+	}
+	if stored.Multiple {
+		args = append(args, "--multiple")
+	}
+
+	return args
+}
+
+// Everything worth keeping about a notification the user ignored, so that it
+// can be raised again and answered later.
+func storeIgnored(req notifyRequest, n pkg.Notification, sent time.Time) {
+	// A pane that cannot be identified is not worth dropping the notification
+	// over: it can still be shown again, only its answer has nowhere to go.
+	pane, err := pkg.TmuxCurrentPane()
+	if err != nil {
+		reportError(fmt.Errorf("recording pane: %w", err))
+	}
+
+	stored := storedNotification{
+		Sent:        sent,
+		Author:      n.Author,
+		TrueAuthor:  trueAuthor(),
+		Head:        req.Head,
+		Body:        req.Body,
+		Options:     req.Options,
+		Interactive: req.Interactive,
+		Custom:      req.Custom,
+		Multiple:    req.Multiple,
+		Pane:        pane,
+	}
+
+	if err := rememberNotification(stored); err != nil {
+		reportError(err)
+	}
+}
+
+// Deliver an answer to the pane the notification was sent from, typing it in
+// without entering it, so it lands on that pane's command line rather than
+// running there.
+func replyToPane(stored storedNotification, selected []string) error {
+	if stored.Pane.ID == "" {
+		return fmt.Errorf("notification %d has no pane to answer", stored.ID)
+	}
+
+	panes, err := pkg.TmuxPanes()
+	if err != nil {
+		return err
+	}
+
+	// The pane has to still be the one tnotify marked: pane ids start over when
+	// the tmux server restarts, and typing an answer into a stranger's shell is
+	// worse than not delivering it at all.
+	title, open := panes[stored.Pane.ID]
+	switch {
+	case !open:
+		return fmt.Errorf("pane %s has closed", stored.Pane.ID)
+	case !markedPane(title):
+		return fmt.Errorf("pane %s is no longer waiting on a notification", stored.Pane.ID)
+	}
+
+	// A newline would be typed as enter, running whatever came before it, so
+	// several answers go across on one line.
+	return pkg.TmuxSendKeys(stored.Pane.ID, strings.Join(selected, " "))
+}
+
+// Write an overlay's outcome in the form the process that opened it reads back:
+// the action on the first line, and anything the user picked on the lines after.
+func encodeResult(result pkg.NotifyResult) string {
+	return strings.Join(append([]string{result.Action}, result.Selected...), "\n") + "\n"
+}
+
+// Read back what an overlay reported. An overlay that never got as far as
+// writing anything is taken to have been ignored, which is the outcome that
+// loses the least.
+func decodeResult(data string) pkg.NotifyResult {
+	lines := strings.Split(strings.TrimSuffix(data, "\n"), "\n")
+	if lines[0] == "" {
+		return pkg.NotifyResult{Action: pkg.ActionIgnore}
+	}
+
+	return pkg.NotifyResult{Action: lines[0], Selected: lines[1:]}
+}
+
+// Open a popup sized to the notification and report what the user did with it.
+func openNotifyOverlay(cfg Config, n pkg.Notification, args []string) (pkg.NotifyResult, error) {
 	// Size the overlay to the message before opening it, so the TUI inside is
 	// handed a popup it already fits.
 	overlay, err := notifyOverlay(cfg, n)
 	if err != nil {
-		return "", err
+		return pkg.NotifyResult{}, err
 	}
 
-	// The popup is a terminal of its own, so anything the user picks in there
-	// has to be handed back through a file for the calling process — the one
-	// still attached to the original terminal — to print.
+	// The popup is a terminal of its own, so what happens in there has to be
+	// handed back through a file for the calling process — the one still
+	// attached to the original terminal — to act on.
 	resultPath, cleanup, err := newResultFile()
 	if err != nil {
-		return "", err
+		return pkg.NotifyResult{}, err
 	}
 	defer cleanup()
 
@@ -107,20 +219,20 @@ func openNotifyOverlay(cfg Config, n pkg.Notification, args []string) (string, e
 	relaunchArgs = append(relaunchArgs, "--author", n.Author)
 
 	if err := pkg.TmuxOverlay(overlay, []string{resultEnvVar + "=" + resultPath}, relaunchArgs); err != nil {
-		return "", err
+		return pkg.NotifyResult{}, err
 	}
 
-	selected, err := os.ReadFile(resultPath)
+	reported, err := os.ReadFile(resultPath)
 	if err != nil {
-		return "", fmt.Errorf("reading selection: %w", err)
+		return pkg.NotifyResult{}, fmt.Errorf("reading selection: %w", err)
 	}
 
-	return string(selected), nil
+	return decodeResult(string(reported)), nil
 }
 
-// Show the notification and record what the user chose. Inside a tmux popup the
-// selection goes to the file named by the result env var; run directly it goes
-// to stdout.
+// Show the notification and report what the user did. Inside a tmux popup the
+// outcome goes to the file named by the result env var; run directly it goes to
+// stdout.
 func runNotifyTUI(n pkg.Notification) {
 	result, err := pkg.RunNotifyTUI(n)
 	if err != nil {
@@ -128,20 +240,21 @@ func runNotifyTUI(n pkg.Notification) {
 		return
 	}
 
-	// Ignoring and clearing both dismiss the notification without an answer.
-	if result.Action != pkg.ActionSelect || len(result.Selected) == 0 {
-		return
-	}
-
-	output := strings.Join(result.Selected, "\n") + "\n"
-
 	path := os.Getenv(resultEnvVar)
+
+	// Run directly there is nobody waiting on the outcome, so only an actual
+	// answer is worth printing.
 	if path == "" {
-		fmt.Print(output)
+		if result.Action == pkg.ActionSelect && len(result.Selected) > 0 {
+			fmt.Println(strings.Join(result.Selected, "\n"))
+		}
 		return
 	}
 
-	if err := os.WriteFile(path, []byte(output), 0o600); err != nil {
+	// The process that opened the popup needs the action as well as the answer:
+	// an ignored notification is the one worth keeping, and a cleared one the
+	// one worth throwing away.
+	if err := os.WriteFile(path, []byte(encodeResult(result)), 0o600); err != nil {
 		reportError(fmt.Errorf("writing selection: %w", err))
 	}
 }
@@ -168,19 +281,86 @@ func dispatchNotify(args []string, isInternal bool) {
 		return
 	}
 
-	selected, err := openNotifyOverlay(cfg, notification, args)
+	// Taken before the popup opens, since this is when the notification was
+	// sent rather than whenever the user got round to dismissing it.
+	sent := time.Now()
+
+	result, err := openNotifyOverlay(cfg, notification, args)
 	if err != nil {
 		reportError(err)
 		return
 	}
-	fmt.Print(selected)
+
+	switch result.Action {
+	case pkg.ActionSelect:
+		fmt.Println(strings.Join(result.Selected, "\n"))
+
+	case pkg.ActionIgnore:
+		// An ignored notification is kept so it can be picked up later; a
+		// cleared one was dismissed on purpose, and is not.
+		storeIgnored(req, notification, sent)
+	}
+}
+
+// Raise the most recently ignored notification again, exactly as it first
+// arrived, and deal with whatever the user does with it this time.
+func showLast(cfg Config) {
+	// A notification whose pane has gone can still be answered, but the answer
+	// will have nowhere to go; find that out before showing it rather than after.
+	if err := reapOrphans(); err != nil {
+		reportError(err)
+	}
+
+	stored, found, err := lastNotification()
+	if err != nil {
+		reportError(err)
+		return
+	}
+	if !found {
+		fmt.Println("no ignored notifications")
+		return
+	}
+
+	result, err := openNotifyOverlay(cfg, storedNotificationView(stored, cfg), storedNotificationArgs(stored))
+	if err != nil {
+		reportError(err)
+		return
+	}
+
+	// Ignored a second time, it stays exactly where it was, still waiting.
+	if result.Action == pkg.ActionIgnore {
+		return
+	}
+
+	if result.Action == pkg.ActionSelect && len(result.Selected) > 0 {
+		// An orphaned notification has no pane left to answer into; anything
+		// else is worth trying, and may still turn out to have lost its pane.
+		delivered := !stored.Orphaned
+		if delivered {
+			if err := replyToPane(stored, result.Selected); err != nil {
+				reportError(err)
+				delivered = false
+			}
+		}
+
+		// The answer is still worth having when the pane it was owed to is not
+		// there to take it, so it falls back to the terminal that asked for it.
+		if !delivered {
+			fmt.Println(strings.Join(result.Selected, "\n"))
+		}
+	}
+
+	// Answered or cleared, it has been dealt with either way.
+	if err := forgetNotification(stored.ID); err != nil {
+		reportError(err)
+	}
 }
 
 // Dispatch "show": relaunch tnotify inside the tmux layout the requested mode
 // asks for, or print the notifications when this is that relaunched process.
 //
 //	--all       -> new pane on the side
-//	--last      -> new overlay
+//	--last      -> the stored notification, in its own overlay
 //	(default)   -> new overlay
 func dispatchShow(args []string, isInternal bool) {
 	if isInternal {
@@ -200,12 +380,19 @@ func dispatchShow(args []string, isInternal bool) {
 		return
 	}
 
+	// --last reopens a stored notification rather than listing anything, so it
+	// goes through the notification overlay, which sizes itself to the message.
+	if mode == "last" {
+		showLast(cfg)
+		return
+	}
+
 	relaunchArgs := append([]string{"--internal", "show"}, args...)
 
 	switch mode {
 	case "all":
 		err = pkg.TmuxPane(cfg.Sidepanel.Direction, cfg.Sidepanel.Width, relaunchArgs)
-	default: // "last" and "default" both use an overlay
+	default:
 		var overlay pkg.Overlay
 		if overlay, err = plainOverlay(cfg); err == nil {
 			err = pkg.TmuxOverlay(overlay, nil, relaunchArgs)
