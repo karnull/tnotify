@@ -11,12 +11,18 @@ const notifyUsage = `Usage: tnotify notify <body> [--head <heading>] [--author <
 
 // notifyRequest is a parsed "tnotify notify ..." invocation.
 type notifyRequest struct {
-	Body        string
-	Head        string
-	Author      string
-	Interactive []string
-	Custom      bool
-	Multiple    bool
+	Body   string
+	Head   string
+	Author string
+
+	Options []string
+
+	// Whether --interactive was given at all, which the options alone do not
+	// say: a bare --interactive alongside --custom carries none.
+	Interactive bool
+
+	Custom   bool
+	Multiple bool
 }
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -45,9 +51,9 @@ func flagValues(args []string, i int) (values []string, next int) {
 }
 
 // Check that the option-list flags were given a list to work on.
-func validateInteractive(req notifyRequest, interactive bool) error {
+func validateInteractive(req notifyRequest) error {
 	// --custom and --multiple only mean anything alongside a list of options.
-	if (req.Custom || req.Multiple) && !interactive {
+	if (req.Custom || req.Multiple) && !req.Interactive {
 		flag := "--custom"
 		if req.Multiple {
 			flag = "--multiple"
@@ -57,7 +63,7 @@ func validateInteractive(req notifyRequest, interactive bool) error {
 
 	// A bare --custom needs no options, but a plain --interactive with none has
 	// nothing to show.
-	if interactive && len(req.Interactive) == 0 && !req.Custom {
+	if req.Interactive && len(req.Options) == 0 && !req.Custom {
 		return fmt.Errorf("--interactive needs at least one option, or --custom to type one\n%s", notifyUsage)
 	}
 
@@ -71,7 +77,6 @@ func parseNotify(args []string) (notifyRequest, error) {
 	}
 
 	var req notifyRequest
-	var interactive bool
 
 	for i := 0; i < len(args); {
 		switch arg := args[i]; arg {
@@ -82,8 +87,8 @@ func parseNotify(args []string) (notifyRequest, error) {
 			req.Author, i = flagValue(args, i)
 
 		case "--interactive":
-			interactive = true
-			req.Interactive, i = flagValues(args, i)
+			req.Interactive = true
+			req.Options, i = flagValues(args, i)
 
 		case "--custom":
 			req.Custom, i = true, i+1
@@ -108,7 +113,7 @@ func parseNotify(args []string) (notifyRequest, error) {
 		}
 	}
 
-	if err := validateInteractive(req, interactive); err != nil {
+	if err := validateInteractive(req); err != nil {
 		return notifyRequest{}, err
 	}
 

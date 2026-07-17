@@ -15,17 +15,29 @@ const (
 	OverlayBorder = overlayBorder
 )
 
+//- Types ------------------------------------------------------------------------------------------
+
+type (
+	StoredNotification = storedNotification
+)
+
 //- Functions --------------------------------------------------------------------------------------
 
 var (
-	DefaultAuthor = defaultAuthor
-	ParentName    = parentName
-	ScriptArg     = scriptArg
-	NotifyColors  = notifyColors
-	FitOverlay    = fitOverlay
-	OverlayBounds = overlayBounds
-	PlaceOverlay  = placeOverlay
-	ParseLocation = parseLocation
-	ParseNotify   = parseNotify
-	ShowMode      = showMode
+	DefaultAuthor          = defaultAuthor
+	ParentName             = parentName
+	ScriptArg              = scriptArg
+	NotifyColors           = notifyColors
+	FitOverlay             = fitOverlay
+	OverlayBounds          = overlayBounds
+	PlaceOverlay           = placeOverlay
+	ParseLocation          = parseLocation
+	ParseNotify            = parseNotify
+	ShowMode               = showMode
+	RememberNotification   = rememberNotification
+	LastNotification       = lastNotification
+	ForgetNotification     = forgetNotification
+	StoredNotificationArgs = storedNotificationArgs
+	DecodeResult           = decodeResult
+	EncodeResult           = encodeResult
 )

@@ -77,8 +77,8 @@ func TestParseNotify(t *testing.T) {
 			if got.Head != test.wantHead {
 				t.Errorf("Head = %q, want %q", got.Head, test.wantHead)
 			}
-			if !slices.Equal(got.Interactive, test.wantOpts) {
-				t.Errorf("Interactive = %q, want %q", got.Interactive, test.wantOpts)
+			if !slices.Equal(got.Options, test.wantOpts) {
+				t.Errorf("Options = %q, want %q", got.Options, test.wantOpts)
 			}
 			if got.Custom != test.wantCust {
 				t.Errorf("Custom = %v, want %v", got.Custom, test.wantCust)

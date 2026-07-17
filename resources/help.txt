@@ -30,15 +30,30 @@ COMMANDS
 
   show                       Display the notification history
     --all                    Show every notification, in a side panel
-    --last                   Show only the most recent notification
+    --last                   Raise the most recently ignored notification
+                             again, as it first arrived, to answer now. The
+                             answer is typed into the pane it was sent from,
+                             without being run; ignoring it again leaves it
+                             waiting
 
   --clear [<index>...]       Clear notification items, each <index> being a
                              number or a range (e.g. 1 2 3-5)
     --all                    Clear the entire notification history
 
+NOTES
+  An ignored notification is kept, so that "show --last" can raise it again
+  and answer it later; one cleared with [del] is not. The pane a notification
+  was sent from is retitled "tnotify:<n>" while it is waiting, and put back
+  once nothing is. A notification whose pane has since closed is orphaned: it
+  can still be read and answered, but its answer is printed rather than sent.
+
 ENVIRONMENT
   TNOTIFY_AUTHOR             Name recorded as the sender when --author is
-                             not given
+                             not given. The caller that actually ran tnotify
+                             is recorded alongside it either way
+  XDG_STATE_HOME             Where ignored notifications are kept; defaults
+                             to ~/.local/state
 
 FILES
   ~/.config/tnotify/config.toml
+  ~/.local/state/tnotify/notifications.json
