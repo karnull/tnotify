@@ -29,7 +29,15 @@ COMMANDS
                              --interactive
 
   show                       Display the notification history
-    --all                    Show every notification, in a side panel
+    --all                    List every waiting notification in a side panel,
+                             each in a numbered box of its own. Move between
+                             them with the arrow keys or j/k, go straight to
+                             one with :<number> and [enter], throw one away
+                             with [del], and open the one in focus with
+                             [enter] to pick from its options; [esc] closes it
+                             again and [q] closes the panel. An answer given
+                             here is typed into the pane the notification was
+                             sent from, the same way "show --last" delivers one
     --last                   Raise the most recently ignored notification
                              again, as it first arrived, to answer now. The
                              answer is typed into the pane it was sent from,

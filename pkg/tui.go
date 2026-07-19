@@ -62,6 +62,11 @@ type notifyModel struct {
 	checked []bool
 	input   textinput.Model
 
+	// inactive marks a notification the user is not currently interacting with
+	// — a box in the side panel they have not entered — so it is drawn without
+	// a cursor and takes no typing.
+	inactive bool
+
 	width  int
 	height int
 
@@ -124,7 +129,20 @@ func newNotifyModel(n Notification) notifyModel {
 
 // Whether the cursor is sitting on the custom text input rather than an option.
 func (m notifyModel) onInput() bool {
-	return m.notification.Custom && m.cursor == len(m.notification.Options)
+	return !m.inactive && m.notification.Custom && m.cursor == len(m.notification.Options)
+}
+
+// Take the user's attention away from this notification, or give it back. Only
+// the notification being interacted with may hold a blinking text cursor, so
+// the input follows the model in and out of use.
+func (m *notifyModel) setActive(active bool) {
+	m.inactive = !active
+
+	if m.onInput() {
+		m.input.Focus()
+	} else {
+		m.input.Blur()
+	}
 }
 
 // The number of rows the user can move between.
@@ -247,7 +265,7 @@ func (m notifyModel) optionRows(textWidth int) []string {
 	rows := make([]string, 0, m.rowCount())
 
 	for i := range m.rowCount() {
-		onRow := i == m.cursor
+		onRow := i == m.cursor && !m.inactive
 
 		prefix := noCursorMark
 		if onRow {
@@ -289,10 +307,9 @@ func (m notifyModel) optionRows(textWidth int) []string {
 }
 
 // Render the notification's text as the block above the footer, plus the footer
-// itself, both wrapped to fit a popup of the given inner width.
-func (m notifyModel) sections(innerWidth int) (top, footer string) {
-	textWidth := max(innerWidth-padX*2, 1)
-
+// itself, both wrapped to the given text width — the room left for words once
+// whatever is drawing them has taken its padding and border.
+func (m notifyModel) sections(textWidth int) (top, footer string) {
 	headStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(m.notification.Colors.Head)).
 		Bold(true).
@@ -417,7 +434,7 @@ func (m notifyModel) View() string {
 		return ""
 	}
 
-	top, footer := m.sections(m.width)
+	top, footer := m.sections(max(m.width-padX*2, 1))
 	body := max(m.height-padY*2, 1)
 
 	// Rows the footer costs, if it is shown at all.
@@ -464,7 +481,7 @@ func (n Notification) MinHeight() int {
 // innerWidth — the popup width less its border, which the caller adds back on.
 func (n Notification) Height(innerWidth int) int {
 	m := newNotifyModel(n)
-	top, footer := m.sections(innerWidth)
+	top, footer := m.sections(max(innerWidth-padX*2, 1))
 
 	rows := padY*2 + lipgloss.Height(top)
 	if footer != "" {

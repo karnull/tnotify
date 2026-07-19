@@ -271,6 +271,38 @@ func lastNotification() (storedNotification, bool, error) {
 	return last, found, err
 }
 
+// Every notification still waiting to be answered, oldest first.
+func allNotifications() ([]storedNotification, error) {
+	var all []storedNotification
+
+	err := withStore(func(store *storeFile) (bool, error) {
+		// Cloned rather than handed out, since the slice belongs to a store
+		// that stops being locked the moment this returns.
+		all = slices.Clone(store.Notifications)
+		return false, nil
+	})
+
+	return all, err
+}
+
+// The notification with the given id, if it is still waiting.
+func notificationByID(id int) (storedNotification, bool, error) {
+	var found storedNotification
+	var ok bool
+
+	err := withStore(func(store *storeFile) (bool, error) {
+		index := slices.IndexFunc(store.Notifications, func(n storedNotification) bool {
+			return n.ID == id
+		})
+		if index >= 0 {
+			found, ok = store.Notifications[index], true
+		}
+		return false, nil
+	})
+
+	return found, ok, err
+}
+
 // Drop a notification that has been dealt with, and give its pane back the
 // title it had if nothing else is waiting on it.
 func forgetNotification(id int) error {
