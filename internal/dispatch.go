@@ -359,15 +359,10 @@ func showLast(cfg Config) {
 // Dispatch "show": relaunch tnotify inside the tmux layout the requested mode
 // asks for, or print the notifications when this is that relaunched process.
 //
-//	--all       -> new pane on the side
+//	--all       -> new pane on the side, listing every waiting notification
 //	--last      -> the stored notification, in its own overlay
 //	(default)   -> new overlay
 func dispatchShow(args []string, isInternal bool) {
-	if isInternal {
-		fmt.Println(parseShow(args))
-		return
-	}
-
 	mode, err := showMode(args)
 	if err != nil {
 		reportError(err)
@@ -377,6 +372,18 @@ func dispatchShow(args []string, isInternal bool) {
 	cfg, err := LoadConfig()
 	if err != nil {
 		reportError(err)
+		return
+	}
+
+	// The tmux layout has been opened by now, and this is the process running
+	// inside it, so what was asked for is drawn here rather than relaunched.
+	if isInternal {
+		if mode == "all" {
+			runPanelTUI(cfg)
+			return
+		}
+
+		fmt.Println(parseShow(args))
 		return
 	}
 

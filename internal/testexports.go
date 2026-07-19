@@ -34,8 +34,11 @@ var (
 	ParseLocation          = parseLocation
 	ParseNotify            = parseNotify
 	ShowMode               = showMode
+	AllNotifications       = allNotifications
 	RememberNotification   = rememberNotification
 	LastNotification       = lastNotification
+	NotificationByID       = notificationByID
+	AnswerNotification     = answerNotification
 	ForgetNotification     = forgetNotification
 	StoredNotificationArgs = storedNotificationArgs
 	DecodeResult           = decodeResult
