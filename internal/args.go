@@ -98,12 +98,12 @@ func ProcessArgs(args []string, isInternal bool) {
 		showConfig()
 	case "--defaults":
 		resetConfig()
-	case "--clear":
-		fmt.Println(parseClear(args[1:]))
 	case "notify":
 		dispatchNotify(args[1:], isInternal)
 	case "show":
 		dispatchShow(args[1:], isInternal)
+	case "clear":
+		dispatchClear(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command or flag: %s\n", cmd)
 		helpText()

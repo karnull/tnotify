@@ -19,6 +19,7 @@ const (
 
 type (
 	StoredNotification = storedNotification
+	ClearRequest       = clearRequest
 )
 
 //- Functions --------------------------------------------------------------------------------------
@@ -34,12 +35,15 @@ var (
 	ParseLocation          = parseLocation
 	ParseNotify            = parseNotify
 	ShowMode               = showMode
+	ParseClear             = parseClear
+	SelectForClearing      = selectForClearing
 	AllNotifications       = allNotifications
 	RememberNotification   = rememberNotification
 	LastNotification       = lastNotification
 	NotificationByID       = notificationByID
 	AnswerNotification     = answerNotification
 	ForgetNotification     = forgetNotification
+	ForgetNotifications    = forgetNotifications
 	StoredNotificationArgs = storedNotificationArgs
 	DecodeResult           = decodeResult
 	EncodeResult           = encodeResult
