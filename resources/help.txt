@@ -5,7 +5,8 @@ SYNOPSIS
   tnotify notify <body> [--head <heading>] [--author <name>]
                         [--interactive [<option>...] [--custom] [--multiple]]
   tnotify show [--all | --last]
-  tnotify --clear [--all | <index>...]
+  tnotify clear [--all | --head <n> | --tail <n> | <number>...]
+                [--author <name>]
 
 OPTIONS
   -h, --help                 Print this help documentation and exit
@@ -44,9 +45,18 @@ COMMANDS
                              without being run; ignoring it again leaves it
                              waiting
 
-  --clear [<index>...]       Clear notification items, each <index> being a
-                             number or a range (e.g. 1 2 3-5)
-    --all                    Clear the entire notification history
+  clear [<number>...]        Throw notifications away without answering them,
+                             each <number> being one the side panel draws on a
+                             box, or a range of them (e.g. 1 2 4-5). Commas
+                             between the numbers are allowed
+    --all                    Clear every waiting notification
+    --head <n>               Clear the <n> that have been waiting longest
+    --tail <n>               Clear the <n> that arrived most recently
+    --author <name>          Clear only what this author sent. On its own it
+                             clears all of them; with --all, --head or --tail
+                             it narrows those to that author. It cannot be
+                             given alongside numbers, which always count from
+                             the whole list
 
 NOTES
   An ignored notification is kept, so that "show --last" can raise it again

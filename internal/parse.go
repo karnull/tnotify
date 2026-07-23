@@ -120,23 +120,6 @@ func parseNotify(args []string) (notifyRequest, error) {
 	return req, nil
 }
 
-// Describe what a "tnotify --clear ..." command line would clear.
-func parseClear(args []string) string {
-	if len(args) == 0 {
-		return "[CLEAR] Clearing notifications (default range)."
-	}
-
-	targets := make([]string, 0, len(args))
-	for _, arg := range args {
-		if arg == "--all" {
-			arg = "ALL"
-		}
-		targets = append(targets, arg)
-	}
-
-	return fmt.Sprintf("[CLEAR] Cleared target(s): %s.", strings.Join(targets, ", "))
-}
-
 // Describe what a "tnotify show ..." command line would display.
 func parseShow(args []string) string {
 	mode, err := showMode(args)

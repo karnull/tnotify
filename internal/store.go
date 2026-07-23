@@ -328,6 +328,44 @@ func forgetNotification(id int) error {
 	})
 }
 
+// Drop several notifications at once, and give each pane they came from back
+// the title it had if nothing is left waiting on it. Ids that are not there are
+// counted as already dealt with rather than as a failure.
+func forgetNotifications(ids []int) (cleared int, err error) {
+	err = withStore(func(store *storeFile) (bool, error) {
+		going := make(map[int]bool, len(ids))
+		for _, id := range ids {
+			going[id] = true
+		}
+
+		// Which pane each is owed to, and the title to put back, have to be
+		// read off before the notifications carrying them are deleted.
+		titles := map[string]string{}
+		for _, n := range store.Notifications {
+			if going[n.ID] && !n.Orphaned {
+				titles[n.Pane.ID] = n.Pane.Title
+			}
+		}
+
+		before := len(store.Notifications)
+		store.Notifications = slices.DeleteFunc(store.Notifications, func(n storedNotification) bool {
+			return going[n.ID]
+		})
+		cleared = before - len(store.Notifications)
+
+		// Retitled once per pane rather than once per notification, so a pane
+		// several were waiting on is not renamed over and over on the way down.
+		for pane, title := range titles {
+			waiting, _ := paneState(*store, pane)
+			markPane(pane, title, waiting)
+		}
+
+		return cleared > 0, nil
+	})
+
+	return cleared, err
+}
+
 // Mark every notification whose pane has since closed, so it is not mistaken
 // for one that can still be answered back to where it came from.
 func reapOrphans() error {
