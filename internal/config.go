@@ -106,6 +106,14 @@ func resetConfig() {
 	fmt.Printf("wrote default config to %s\n", path)
 }
 
+// The config as shipped, for when the user's own cannot be read. The embedded
+// default is known good, so a failure to decode it is not worth reporting.
+func defaultConfig() Config {
+	var cfg Config
+	toml.Decode(resources.DefaultConfig, &cfg)
+	return cfg
+}
+
 //- Public Calls -----------------------------------------------------------------------------------
 
 // Read the user's config file, falling back to the embedded default when they

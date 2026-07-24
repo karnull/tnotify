@@ -6,9 +6,6 @@ package resources
 
 import _ "embed"
 
-//go:embed help.txt
-var HelpText string
-
 //go:embed version.txt
 var Version string
 

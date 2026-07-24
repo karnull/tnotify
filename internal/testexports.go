@@ -7,12 +7,18 @@ package internal
 // door through: the names stay unexported where they are written, and are
 // reached from outside under exported ones here.
 
+import (
+	"github.com/charmbracelet/lipgloss"
+)
+
 //- Constants --------------------------------------------------------------------------------------
 
 const (
 	AuthorEnvVar  = authorEnvVar
 	HiddenSetting = colorHidden
 	OverlayBorder = overlayBorder
+	HelpMinWidth  = helpMinWidth
+	HelpMaxWidth  = helpMaxWidth
 )
 
 //- Types ------------------------------------------------------------------------------------------
@@ -33,6 +39,7 @@ var (
 	OverlayBounds          = overlayBounds
 	PlaceOverlay           = placeOverlay
 	ParseLocation          = parseLocation
+	WrapText               = wrapText
 	ParseNotify            = parseNotify
 	ShowMode               = showMode
 	ParseClear             = parseClear
@@ -48,3 +55,7 @@ var (
 	DecodeResult           = decodeResult
 	EncodeResult           = encodeResult
 )
+
+func RenderHelpAt(renderer *lipgloss.Renderer, width int) string {
+	return renderHelpAt(renderer, width)
+}
