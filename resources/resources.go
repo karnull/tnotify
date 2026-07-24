@@ -10,9 +10,6 @@ import (
 	"github.com/karnull/tnotify"
 )
 
-//go:embed help.txt
-var HelpText string
-
 // The release version, embedded from VERSION at the module root.
 var Version = tnotify.Version
 

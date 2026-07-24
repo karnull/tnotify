@@ -26,9 +26,9 @@ func reportError(err error) {
 	fmt.Fprintln(os.Stderr, "error:", err)
 }
 
-// Print the help documentation (resources/help.txt) to stderr.
+// Print the help documentation to stderr, laid out for the terminal it lands in.
 func helpText() {
-	fmt.Fprint(os.Stderr, resources.HelpText)
+	fmt.Fprint(os.Stderr, renderHelp(os.Stderr))
 }
 
 // Say what the skill is and where it belongs. It goes to stderr so that the
