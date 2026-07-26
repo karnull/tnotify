@@ -87,6 +87,12 @@ func splitFlags(side string) ([]string, error) {
 
 //- Public Calls -----------------------------------------------------------------------------------
 
+// Whether this process is running inside a tmux session. Worth asking before
+// anything tmux is merely told about, as opposed to asked for.
+func InsideTmux() bool {
+	return tmux.IsInsideTmux()
+}
+
 // Return the size of the tmux client displaying the current pane, in cells.
 // This is the whole terminal, status line included, which is the coordinate
 // space popups are positioned in.
@@ -138,6 +144,25 @@ func TmuxOverlay(overlay Overlay, env []string, args []string) error {
 	tmuxArgs = append(tmuxArgs, "-E")
 
 	return runSelfInTmux(tmuxArgs, args)
+}
+
+// Set a variable in tmux's global environment, where a status line can read it
+// back as "#{NAME}".
+func TmuxSetGlobalEnv(name, value string) error {
+	if !tmux.IsInsideTmux() {
+		return fmt.Errorf("not inside a tmux session")
+	}
+
+	// The redraw goes across in the same command: a status line is only redrawn
+	// on its own interval otherwise, so the value it shows would lag the one it
+	// was just given by however long that is.
+	args := []string{"set-environment", "-g", name, value, ";", "refresh-client", "-S"}
+
+	if _, stderr, err := tmux.RunCmd(args); err != nil {
+		return fmt.Errorf("set-environment: %v: %s", err, stderr)
+	}
+
+	return nil
 }
 
 // Describe the pane this process is running in. Title is the pane's current

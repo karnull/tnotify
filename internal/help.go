@@ -96,6 +96,7 @@ func helpContent() (usage []string, sections []helpSection) {
 
 		{title: "ENVIRONMENT", entries: []helpEntry{
 			{term: "TNOTIFY_AUTHOR", desc: "Name recorded as the sender when --author is not given. The caller that actually ran tnotify is recorded alongside it either way"},
+			{term: "TNOTIFY_COUNT", desc: "Set by tnotify in tmux's global environment: how many notifications are waiting. Read it in a status line as #{TNOTIFY_COUNT}"},
 			{term: "XDG_STATE_HOME", desc: "Where ignored notifications are kept; defaults to ~/.local/state"},
 		}},
 
