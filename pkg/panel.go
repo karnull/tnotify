@@ -412,12 +412,17 @@ func (m panelModel) warnStyle(width int) lipgloss.Style {
 }
 
 // The top of a box, with the number the panel knows the notification by set
-// into the border. It is drawn here rather than left to lipgloss, which borders
-// a block but will not write anything into one.
-func (m panelModel) boxTop(number int, style lipgloss.Style) string {
+// into the border, along with anything there is to say about the notification
+// beside it. It is drawn here rather than left to lipgloss, which borders a
+// block but will not write anything into one.
+func (m panelModel) boxTop(number int, note string, style lipgloss.Style) string {
 	border := lipgloss.RoundedBorder()
 
 	label := fmt.Sprintf("%s %d ", border.Top, number)
+	if note != "" {
+		label += fmt.Sprintf("%s %s ", border.Top, note)
+	}
+
 	fill := max(m.width-2-lipgloss.Width(label), 0)
 
 	return style.Render(border.TopLeft + label + strings.Repeat(border.Top, fill) + border.TopRight)
@@ -439,10 +444,21 @@ func (m panelModel) boxView(item PanelItem, box *notifyModel, number int, focuse
 	}
 
 	colour := m.colors.Border
-	if focused {
+
+	// A notification nobody is waiting on any more is greyed out, but the
+	// cursor still has to be findable, so focus wins over it.
+	switch {
+	case focused:
 		colour = m.colors.Selection
+	case item.Notification.Expired:
+		colour = m.colors.Expired
 	}
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colour))
+
+	note := ""
+	if item.Notification.Expired {
+		note = "timeout"
+	}
 
 	// The top is drawn separately so the number can sit in it, so the rest of
 	// the box is bordered on three sides and joined underneath.
@@ -454,7 +470,7 @@ func (m panelModel) boxView(item PanelItem, box *notifyModel, number int, focuse
 		Width(m.width - boxBorder).
 		Render(top)
 
-	return m.boxTop(number, style) + "\n" + rest
+	return m.boxTop(number, note, style) + "\n" + rest
 }
 
 // Every row of every box, one after another, along with where the focused box

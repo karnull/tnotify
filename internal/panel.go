@@ -59,6 +59,12 @@ func answerNotification(id int, selected []string) error {
 		return nil
 	}
 
+	// Something still waiting on this notification is owed the answer before
+	// anyone else: it asked for it and has not given up.
+	if releaseWaiter(stored, pkg.NotifyResult{Action: pkg.ActionSelect, Selected: selected}) {
+		return forgetNotification(id)
+	}
+
 	// An orphaned notification has no pane left to answer into. Trying anyway
 	// would report the same thing in less familiar words.
 	if stored.Orphaned {

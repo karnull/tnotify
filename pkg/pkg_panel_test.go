@@ -641,8 +641,11 @@ func TestAJumpCanBeBackedOutOf(t *testing.T) {
 		t.Errorf("backspace deleted %v while a number was being typed", f.deleted)
 	}
 }
+<<<<<<< HEAD:pkg/pkg_panel_test.go
 <<<<<<<< HEAD:pkg/pkg_panel_test.go
 ========
+=======
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/pkg_panel_test.go
 
 // A notification whose caller stopped waiting is drawn as the plain message it
 // has become: named as timed out, with nothing left to pick.
@@ -673,11 +676,19 @@ func TestExpiredNotificationCannotBeEntered(t *testing.T) {
 	f.items[1].Notification.Expired = true
 
 	panel := press(t, newTestPanel(t, f, 40, 40), "j", "enter")
+<<<<<<< HEAD:pkg/pkg_panel_test.go
 	if state(t, panel).entered {
 		t.Error("panel entered a notification nobody is waiting on")
 	}
 
 	if hints := strings.Join(state(t, panel).hints(), " "); strings.Contains(hints, "open") {
+=======
+	if state(t, panel).Entered() {
+		t.Error("panel entered a notification nobody is waiting on")
+	}
+
+	if hints := strings.Join(state(t, panel).Hints(), " "); strings.Contains(hints, "open") {
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/pkg_panel_test.go
 		t.Errorf("hints still offer to open it: %q", hints)
 	}
 
@@ -687,4 +698,7 @@ func TestExpiredNotificationCannotBeEntered(t *testing.T) {
 		t.Errorf("deleted = %v, want the expired notification (2)", f.deleted)
 	}
 }
+<<<<<<< HEAD:pkg/pkg_panel_test.go
 >>>>>>>> 5d0a602 (fixup! feat: list waiting notifications in a side panel):pkg/panel_test.go
+=======
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/pkg_panel_test.go

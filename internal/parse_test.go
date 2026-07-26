@@ -125,7 +125,11 @@ func TestParseNotifyTimeout(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+<<<<<<< HEAD:internal/parse_test.go
 			got, err := parseNotify(test.args)
+=======
+			got, err := internal.ParseNotify(test.args)
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/internal_parse_test.go
 			if err != nil {
 				t.Fatalf("parseNotify(%q) returned error: %v", test.args, err)
 			}
@@ -137,7 +141,10 @@ func TestParseNotifyTimeout(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:internal/parse_test.go
 >>>>>>>> 4c5d5f9 (fixup! feat: read notify, show and clear command lines):internal/parse_test.go
+=======
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/internal_parse_test.go
 func TestParseNotifyErrors(t *testing.T) {
 	tests := []struct {
 		name string
@@ -149,6 +156,9 @@ func TestParseNotifyErrors(t *testing.T) {
 		{"interactive with no options", []string{"hi", "--interactive"}},
 		{"retired interactive-custom", []string{"hi", "--interactive-custom", "a", "b"}},
 		{"unknown flag", []string{"hi", "--nonsense"}},
+		{"a timeout with no seconds", []string{"hi", "--timeout"}},
+		{"a timeout that is not a number", []string{"hi", "--timeout", "soon"}},
+		{"a timeout counted backwards", []string{"hi", "--timeout", "-5"}},
 	}
 
 	for _, test := range tests {

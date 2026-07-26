@@ -4,10 +4,11 @@ package internal
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
-const notifyUsage = `Usage: tnotify notify <body> [--head <heading>] [--author <name>] [--interactive [<option>...] [--custom] [--multiple]]`
+const notifyUsage = `Usage: tnotify notify <body> [--head <heading>] [--author <name>] [--wait] [--timeout <seconds>] [--interactive [<option>...] [--custom] [--multiple]]`
 
 // notifyRequest is a parsed "tnotify notify ..." invocation.
 type notifyRequest struct {
@@ -23,6 +24,14 @@ type notifyRequest struct {
 
 	Custom   bool
 	Multiple bool
+
+	// Whether the caller stays on the line when the user sets the notification
+	// aside, rather than giving up on an answer the moment the popup closes.
+	Wait bool
+
+	// How many seconds it is prepared to wait for, zero meaning for as long as
+	// it takes. Only meaningful alongside Wait, which it implies.
+	Timeout int
 }
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -48,6 +57,22 @@ func flagValues(args []string, i int) (values []string, next int) {
 		values = append(values, args[i])
 	}
 	return values, i
+}
+
+// Read the seconds following --timeout. Zero is the default and means no limit
+// at all, so only a negative count is nonsense.
+func timeoutValue(args []string, i int) (seconds, next int, err error) {
+	value, next := flagValue(args, i)
+	if value == "" {
+		return 0, next, fmt.Errorf("--timeout needs a number of seconds, or 0 for no limit\n%s", notifyUsage)
+	}
+
+	seconds, err = strconv.Atoi(value)
+	if err != nil || seconds < 0 {
+		return 0, next, fmt.Errorf("--timeout needs a number of seconds, not %q\n%s", value, notifyUsage)
+	}
+
+	return seconds, next, nil
 }
 
 // Check that the option-list flags were given a list to work on.
@@ -77,6 +102,7 @@ func parseNotify(args []string) (notifyRequest, error) {
 	}
 
 	var req notifyRequest
+	var err error
 
 	for i := 0; i < len(args); {
 		switch arg := args[i]; arg {
@@ -95,6 +121,16 @@ func parseNotify(args []string) (notifyRequest, error) {
 
 		case "--multiple":
 			req.Multiple, i = true, i+1
+
+		case "--wait":
+			req.Wait, i = true, i+1
+
+		case "--timeout":
+			// Naming a limit is only ever asking to wait up to it.
+			req.Wait = true
+			if req.Timeout, i, err = timeoutValue(args, i); err != nil {
+				return notifyRequest{}, err
+			}
 
 		case "--interactive-custom":
 			// Replaced by "--interactive ... --custom"; say so rather than

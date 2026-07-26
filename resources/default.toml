@@ -7,6 +7,8 @@ author    = "#0BE0CE"
 selection = "#ED0800"
 # Set footer to "<hidden>" to drop the key hints from the bottom of the popup.
 footer    = "#874BFD"
+# Notifications whose caller stopped waiting for an answer.
+expired   = "#6C6C6C"
 
 [sidepanel]
 # direction: <left|right>

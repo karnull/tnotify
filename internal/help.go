@@ -59,7 +59,7 @@ func helpContent() (usage []string, sections []helpSection) {
 	// Written as one line each; how they break up is the terminal's business.
 	usage = []string{
 		"tnotify [-h | -v | --skill | --config | --defaults]",
-		"tnotify notify <body> [--head <heading>] [--author <name>] [--interactive [<option>...] [--custom] [--multiple]]",
+		"tnotify notify <body> [--head <heading>] [--author <name>] [--wait] [--timeout <seconds>] [--interactive [<option>...] [--custom] [--multiple]]",
 		"tnotify show [--all | --last]",
 		"tnotify clear [--all | --head <n> | --tail <n> | <number>...] [--author <name>]",
 	}
@@ -80,6 +80,8 @@ func helpContent() (usage []string, sections []helpSection) {
 			{term: "--interactive [<option>...]", under: true, desc: "Offer options to pick from; the chosen one is printed in the original terminal"},
 			{term: "--custom", under: true, desc: "Add a text box to type an answer in; requires --interactive"},
 			{term: "--multiple", under: true, desc: "Select several options with space; requires --interactive"},
+			{term: "--wait", under: true, desc: "Hold for an answer given later, however long that takes"},
+			{term: "--timeout <seconds>", under: true, desc: "Give up waiting after this long; implies --wait. Zero, the default, is no limit"},
 
 			{term: "show", desc: "Display the notification history"},
 			{term: "--all", under: true, desc: "List every waiting notification in a side panel, each in a numbered box of its own. Move between them with the arrow keys or j/k, go straight to one with :<number> and [enter], throw one away with [del], and open the one in focus with [enter] to pick from its options; [esc] closes it again and [q] closes the panel. An answer given here is typed into the pane the notification was sent from, the same way \"show --last\" delivers one"},

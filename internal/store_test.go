@@ -43,11 +43,15 @@ func tempStore(t *testing.T) {
 // Keep a notification with the given body, failing the test if it cannot be.
 func remember(t *testing.T, body string) {
 	t.Helper()
+<<<<<<< HEAD:internal/store_test.go
 <<<<<<<< HEAD:pkg/internal_store_test.go
 	if err := internal.RememberNotification(internal.StoredNotification{Body: body}); err != nil {
 ========
 	if _, err := rememberNotification(storedNotification{Body: body}); err != nil {
 >>>>>>>> 64dd78e (fixup! feat: keep ignored notifications and answer them later):internal/store_test.go
+=======
+	if _, err := internal.RememberNotification(internal.StoredNotification{Body: body}); err != nil {
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/internal_store_test.go
 		t.Fatalf("rememberNotification(%q) returned error: %v", body, err)
 	}
 }
@@ -99,11 +103,15 @@ func TestNotificationSurvivesTheStore(t *testing.T) {
 	}
 	sent.Pane.ID = "%7"
 
+<<<<<<< HEAD:internal/store_test.go
 <<<<<<<< HEAD:pkg/internal_store_test.go
 	if err := internal.RememberNotification(sent); err != nil {
 ========
 	if _, err := rememberNotification(sent); err != nil {
 >>>>>>>> 64dd78e (fixup! feat: keep ignored notifications and answer them later):internal/store_test.go
+=======
+	if _, err := internal.RememberNotification(sent); err != nil {
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/internal_store_test.go
 		t.Fatalf("rememberNotification() returned error: %v", err)
 	}
 

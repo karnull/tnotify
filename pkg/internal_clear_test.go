@@ -12,11 +12,15 @@ import (
 // Keep a notification from a named author, failing the test if it cannot be.
 func rememberFrom(t *testing.T, author, body string) {
 	t.Helper()
+<<<<<<< HEAD:pkg/internal_clear_test.go
 <<<<<<<< HEAD:pkg/internal_clear_test.go
 	if err := internal.RememberNotification(internal.StoredNotification{Author: author, Body: body}); err != nil {
 ========
 	if _, err := rememberNotification(storedNotification{Author: author, Body: body}); err != nil {
 >>>>>>>> b72b730 (fixup! feat: clear notifications by author, position or range):internal/clear_test.go
+=======
+	if _, err := internal.RememberNotification(internal.StoredNotification{Author: author, Body: body}); err != nil {
+>>>>>>> c02fdfb (feat: hold the caller on the line for a later answer):test/internal_clear_test.go
 		t.Fatalf("rememberNotification(%q) returned error: %v", body, err)
 	}
 }
