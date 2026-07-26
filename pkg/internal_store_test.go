@@ -22,22 +22,33 @@ func stubAnnounceCount(announce func(waiting int) error) func() {
 }
 
 // Point the store at a directory of this test's own, so tests never touch the
-// notifications the user is actually keeping.
-func tempStore(t *testing.T) {
+// notifications the user is actually keeping, and catch the counts it publishes
+// rather than letting them reach the tmux session the test is being run in.
+func tempStore(t *testing.T) *[]int {
 	t.Helper()
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
+<<<<<<< HEAD:pkg/internal_store_test.go
 <<<<<<<< HEAD:pkg/internal_store_test.go
 ========
 
 	published := []int{}
 
 	t.Cleanup(stubAnnounceCount(func(waiting int) error {
+=======
+
+	published := []int{}
+
+	t.Cleanup(internal.StubAnnounceCount(func(waiting int) error {
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 		published = append(published, waiting)
 		return nil
 	}))
 
 	return &published
+<<<<<<< HEAD:pkg/internal_store_test.go
 >>>>>>>> 64dd78e (fixup! feat: keep ignored notifications and answer them later):internal/store_test.go
+=======
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 }
 
 // Keep a notification with the given body, failing the test if it cannot be.
@@ -165,8 +176,11 @@ func TestForgetUnknownNotification(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/internal_store_test.go
 <<<<<<<< HEAD:pkg/internal_store_test.go
 ========
+=======
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 // The count is what a tmux status line shows, so it has to follow the store up
 // as notifications arrive and back down as they are dealt with.
 func TestWaitingCountIsPublished(t *testing.T) {
@@ -176,7 +190,11 @@ func TestWaitingCountIsPublished(t *testing.T) {
 	remember(t, "second")
 
 	newest := last(t)
+<<<<<<< HEAD:pkg/internal_store_test.go
 	if err := forgetNotification(newest.ID); err != nil {
+=======
+	if err := internal.ForgetNotification(newest.ID); err != nil {
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 		t.Fatalf("forgetNotification() returned error: %v", err)
 	}
 
@@ -193,7 +211,11 @@ func TestUnchangedCountIsNotRepublished(t *testing.T) {
 	remember(t, "waiting")
 
 	for range 3 {
+<<<<<<< HEAD:pkg/internal_store_test.go
 		if _, err := allNotifications(); err != nil {
+=======
+		if _, err := internal.AllNotifications(); err != nil {
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 			t.Fatalf("allNotifications() returned error: %v", err)
 		}
 	}
@@ -208,7 +230,11 @@ func TestUnchangedCountIsNotRepublished(t *testing.T) {
 func TestFirstStoreAccessPublishesTheCount(t *testing.T) {
 	published := tempStore(t)
 
+<<<<<<< HEAD:pkg/internal_store_test.go
 	if _, err := allNotifications(); err != nil {
+=======
+	if _, err := internal.AllNotifications(); err != nil {
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 		t.Fatalf("allNotifications() returned error: %v", err)
 	}
 
@@ -217,7 +243,10 @@ func TestFirstStoreAccessPublishesTheCount(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/internal_store_test.go
 >>>>>>>> 64dd78e (fixup! feat: keep ignored notifications and answer them later):internal/store_test.go
+=======
+>>>>>>> 1f0d382 (feat: publish total notifications waiting to tmux):test/internal_store_test.go
 // Ids are what a notification is removed by, so one that has been dealt with
 // must not have its id handed to the next notification along.
 func TestNotificationIDsAreNotReused(t *testing.T) {

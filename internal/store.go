@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,6 +30,25 @@ const storeVersion = 1
 // The title a pane is given while notifications are waiting on it, followed by
 // how many. A pane wearing this is one tnotify still expects to answer into.
 const paneMarker = "tnotify"
+
+// The tmux global environment variable the number of waiting notifications is
+// published in, for a status line to draw as "#{TNOTIFY_COUNT}".
+const countEnvVar = "TNOTIFY_COUNT"
+
+// The count this process last told tmux about, so reading the store over and
+// over — as the side panel does — does not spend a tmux call re-announcing a
+// number that has not moved. It starts unset rather than at zero, which is what
+// makes the first store access of every process publish: a tmux server that has
+// been restarted has forgotten the count, and the store has not.
+var (
+	publishedMu    sync.Mutex
+	publishedCount = -1
+
+	// How the count reaches tmux, as a variable so that a test can watch it go
+	// without a tmux server to send it to — and, run inside one, without
+	// writing the test's own count over the session's.
+	announceCount = tmuxAnnounceCount
+)
 
 // storedNotification is a notification the user ignored, kept in full so it can
 // be shown again exactly as it first arrived and answered afterwards.
@@ -165,6 +186,34 @@ func writeStore(path string, store storeFile) error {
 	return nil
 }
 
+// Hand the count to tmux's global environment. Outside tmux there is nobody to
+// hand it to, which is not a failure: the count is only ever there to be read
+// off a status line.
+func tmuxAnnounceCount(waiting int) error {
+	if !pkg.InsideTmux() {
+		return nil
+	}
+	return pkg.TmuxSetGlobalEnv(countEnvVar, strconv.Itoa(waiting))
+}
+
+// Publish how many notifications are waiting, so a status line reading
+// "#{TNOTIFY_COUNT}" can show it. A count that will not go across is not worth
+// interrupting the command over: nothing about the notification depends on it,
+// and the next store access publishes again anyway.
+func publishCount(waiting int) {
+	publishedMu.Lock()
+	defer publishedMu.Unlock()
+
+	if waiting == publishedCount {
+		return
+	}
+
+	if err := announceCount(waiting); err != nil {
+		return
+	}
+	publishedCount = waiting
+}
+
 // Run fn against the stored notifications, writing the result back when fn
 // reports it changed something. The store is locked for the whole call, so two
 // tnotify processes cannot lose each other's changes.
@@ -191,11 +240,22 @@ func withStore(fn func(store *storeFile) (changed bool, err error)) error {
 	}
 
 	changed, err := fn(&store)
-	if err != nil || !changed {
+	if err != nil {
 		return err
 	}
 
-	return writeStore(path, store)
+	if changed {
+		if err := writeStore(path, store); err != nil {
+			return err
+		}
+	}
+
+	// Published from under the lock, and off a read as much as a write, so the
+	// number tmux is holding is the store as it stands rather than as some other
+	// tnotify left it a moment later.
+	publishCount(len(store.Notifications))
+
+	return nil
 }
 
 // Count the notifications still waiting on a pane, and recover the title that

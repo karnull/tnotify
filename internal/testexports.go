@@ -59,3 +59,18 @@ var (
 func RenderHelpAt(renderer *lipgloss.Renderer, width int) string {
 	return renderHelpAt(renderer, width)
 }
+
+//- Test Hooks -------------------------------------------------------------------------------------
+
+// StubAnnounceCount catches the counts the store would publish to tmux, so
+// a test never reaches the session it is being run in. The returned
+// function puts the real announcer back.
+//
+// The dedupe is process-wide, so it starts over both ways round: a later
+// test would otherwise see nothing published for a count an earlier one
+// used.
+func StubAnnounceCount(announce func(waiting int) error) func() {
+	announceCount, publishedCount = announce, -1
+
+	return func() { announceCount, publishedCount = tmuxAnnounceCount, -1 }
+}

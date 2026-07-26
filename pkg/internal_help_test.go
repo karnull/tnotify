@@ -114,7 +114,7 @@ func TestHelpDocumentsEveryCommandAndFlag(t *testing.T) {
 		"notify", "--head", "--author", "--interactive", "--custom", "--multiple",
 		"show", "--all", "--last",
 		"clear", "--tail",
-		"TNOTIFY_AUTHOR", "XDG_STATE_HOME",
+		"TNOTIFY_AUTHOR", "TNOTIFY_COUNT", "XDG_STATE_HOME",
 	} {
 		if !strings.Contains(help, want) {
 			t.Errorf("help does not mention %q", want)
