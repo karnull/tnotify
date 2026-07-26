@@ -146,6 +146,20 @@ func TmuxOverlay(overlay Overlay, env []string, args []string) error {
 	return runSelfInTmux(tmuxArgs, args)
 }
 
+// Close any popup open on the client. This is how a notification nobody came to
+// is taken off the screen once the caller waiting on it has run out of time.
+func TmuxClosePopup() error {
+	if !tmux.IsInsideTmux() {
+		return fmt.Errorf("not inside a tmux session")
+	}
+
+	if _, stderr, err := tmux.RunCmd([]string{"display-popup", "-C"}); err != nil {
+		return fmt.Errorf("display-popup -C: %v: %s", err, stderr)
+	}
+
+	return nil
+}
+
 // Set a variable in tmux's global environment, where a status line can read it
 // back as "#{NAME}".
 func TmuxSetGlobalEnv(name, value string) error {

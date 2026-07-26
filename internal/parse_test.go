@@ -146,6 +146,9 @@ func TestParseNotifyErrors(t *testing.T) {
 		{"interactive with no options", []string{"hi", "--interactive"}},
 		{"retired interactive-custom", []string{"hi", "--interactive-custom", "a", "b"}},
 		{"unknown flag", []string{"hi", "--nonsense"}},
+		{"a timeout with no seconds", []string{"hi", "--timeout"}},
+		{"a timeout that is not a number", []string{"hi", "--timeout", "soon"}},
+		{"a timeout counted backwards", []string{"hi", "--timeout", "-5"}},
 	}
 
 	for _, test := range tests {

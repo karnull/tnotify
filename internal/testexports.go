@@ -49,11 +49,15 @@ var (
 	LastNotification       = lastNotification
 	NotificationByID       = notificationByID
 	AnswerNotification     = answerNotification
+	ExpireNotification     = expireNotification
 	ForgetNotification     = forgetNotification
 	ForgetNotifications    = forgetNotifications
 	StoredNotificationArgs = storedNotificationArgs
 	DecodeResult           = decodeResult
 	EncodeResult           = encodeResult
+	NewReplyFile           = newReplyFile
+	ReleaseWaiter          = releaseWaiter
+	WaitForAnswer          = waitForAnswer
 )
 
 func RenderHelpAt(renderer *lipgloss.Renderer, width int) string {

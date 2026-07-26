@@ -46,6 +46,7 @@ func NewPanelItemsMsg(items []PanelItem, revision int) panelItemsMsg {
 
 func (m panelModel) LoadCmd() tea.Cmd                         { return m.loadCmd() }
 func (m panelModel) Focused() (PanelItem, *NotifyModel, bool) { return m.focused() }
+func (m panelModel) Hints() []string                          { return m.hints() }
 
 func (m panelModel) Items() []PanelItem       { return m.items }
 func (m panelModel) Failures() map[int]string { return m.failures }

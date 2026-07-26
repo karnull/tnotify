@@ -76,6 +76,16 @@ type storedNotification struct {
 	// somewhere to go back to.
 	Pane pkg.PaneInfo `json:"pane"`
 
+	// Where a process still waiting on this notification wants the answer
+	// written, and which process that is. An answer given long after the popup
+	// closed goes back to whoever asked for it rather than into their pane.
+	Reply  string `json:"reply,omitempty"`
+	Waiter int    `json:"waiter,omitempty"`
+
+	// Set once the caller stopped waiting for an answer. What it asked is kept,
+	// but there is nobody left to answer, so it becomes a plain message.
+	Expired bool `json:"expired,omitempty"`
+
 	// Set once that pane has closed. An orphaned notification can still be read
 	// and answered; only its answer has nowhere left to go.
 	Orphaned bool `json:"orphaned,omitempty"`
@@ -293,9 +303,12 @@ func markedPane(title string) bool {
 	return strings.HasPrefix(title, paneMarker+":")
 }
 
-// Keep an ignored notification, and mark the pane it came from.
-func rememberNotification(n storedNotification) error {
-	return withStore(func(store *storeFile) (bool, error) {
+// Keep an ignored notification, mark the pane it came from, and report the id
+// it was filed under so the caller can come back to it.
+func rememberNotification(n storedNotification) (int, error) {
+	var id int
+
+	err := withStore(func(store *storeFile) (bool, error) {
 		waiting, original := paneState(*store, n.Pane.ID)
 
 		// Only the first notification on a pane sees the pane's own title; after
@@ -311,6 +324,28 @@ func rememberNotification(n storedNotification) error {
 		store.Notifications = append(store.Notifications, n)
 
 		markPane(n.Pane.ID, original, waiting+1)
+
+		id = n.ID
+		return true, nil
+	})
+
+	return id, err
+}
+
+// Mark a notification as one nobody is waiting on any more, and forget where
+// its caller was, since that caller has gone.
+func expireNotification(id int) error {
+	return withStore(func(store *storeFile) (bool, error) {
+		index := slices.IndexFunc(store.Notifications, func(n storedNotification) bool {
+			return n.ID == id
+		})
+		if index < 0 {
+			return false, nil
+		}
+
+		store.Notifications[index].Expired = true
+		store.Notifications[index].Reply = ""
+		store.Notifications[index].Waiter = 0
 
 		return true, nil
 	})
@@ -377,6 +412,11 @@ func forgetNotification(id int) error {
 		dealt := store.Notifications[index]
 		store.Notifications = slices.Delete(store.Notifications, index, index+1)
 
+		// Anything still waiting on this notification has to be let go, or it
+		// would wait on an answer that is never coming. Releasing an already
+		// answered one is harmless: its reply has been written.
+		releaseWaiter(dealt, pkg.NotifyResult{Action: pkg.ActionClear})
+
 		// A pane that has gone is not there to be retitled, and complaining that
 		// it cannot be found says nothing the orphaning did not already say.
 		if !dealt.Orphaned {
@@ -402,7 +442,13 @@ func forgetNotifications(ids []int) (cleared int, err error) {
 		// read off before the notifications carrying them are deleted.
 		titles := map[string]string{}
 		for _, n := range store.Notifications {
-			if going[n.ID] && !n.Orphaned {
+			if !going[n.ID] {
+				continue
+			}
+			// Anything still waiting on one of these has to be let go.
+			releaseWaiter(n, pkg.NotifyResult{Action: pkg.ActionClear})
+
+			if !n.Orphaned {
 				titles[n.Pane.ID] = n.Pane.Title
 			}
 		}

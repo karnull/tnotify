@@ -18,6 +18,10 @@ const resultEnvVar = "TNOTIFY_RESULT"
 // A colour set to this in the config switches that element off instead.
 const colorHidden = "<hidden>"
 
+// What a timed-out notification is drawn in when the config predates having a
+// colour for it: grey enough to read as spent without disappearing.
+const defaultExpiredColor = "#6C6C6C"
+
 //- Private Helpers --------------------------------------------------------------------------------
 
 // Translate the config's [colors] into the set the TUI draws with, resolving
@@ -30,6 +34,7 @@ func notifyColors(cfg Config) pkg.NotifyColors {
 		Author:    cfg.Colors.Author,
 		Selection: cfg.Colors.Selection,
 		Footer:    cfg.Colors.Footer,
+		Expired:   cfg.Colors.Expired,
 	}
 
 	// Configs written before these existed still get a sensible notification.
@@ -38,6 +43,9 @@ func notifyColors(cfg Config) pkg.NotifyColors {
 	}
 	if colors.Footer == "" {
 		colors.Footer = colors.Border
+	}
+	if colors.Expired == "" {
+		colors.Expired = defaultExpiredColor
 	}
 
 	// An empty footer colour is how the TUI is told to leave the footer out.
@@ -88,6 +96,8 @@ func buildNotification(req notifyRequest, cfg Config) pkg.Notification {
 // Restore a stored notification to the form the TUI draws. Its colours come
 // from the config as it stands now, not as it stood when it was sent.
 func storedNotificationView(stored storedNotification, cfg Config) pkg.Notification {
+	// An expired notification keeps everything it was sent with; the TUI is
+	// what decides that there is no longer anything to pick from it.
 	return pkg.Notification{
 		Author:   stored.Author,
 		Head:     stored.Head,
@@ -95,6 +105,7 @@ func storedNotificationView(stored storedNotification, cfg Config) pkg.Notificat
 		Options:  stored.Options,
 		Custom:   stored.Custom,
 		Multiple: stored.Multiple,
+		Expired:  stored.Expired,
 		Colors:   notifyColors(cfg),
 	}
 }
@@ -124,7 +135,7 @@ func storedNotificationArgs(stored storedNotification) []string {
 
 // Everything worth keeping about a notification the user ignored, so that it
 // can be raised again and answered later.
-func storeIgnored(req notifyRequest, n pkg.Notification, sent time.Time) {
+func storeIgnored(req notifyRequest, n pkg.Notification, sent time.Time, reply string, expired bool) int {
 	// A pane that cannot be identified is not worth dropping the notification
 	// over: it can still be shown again, only its answer has nowhere to go.
 	pane, err := pkg.TmuxCurrentPane()
@@ -142,12 +153,22 @@ func storeIgnored(req notifyRequest, n pkg.Notification, sent time.Time) {
 		Interactive: req.Interactive,
 		Custom:      req.Custom,
 		Multiple:    req.Multiple,
+		Expired:     expired,
 		Pane:        pane,
 	}
 
-	if err := rememberNotification(stored); err != nil {
+	// A caller that is staying on the line says where to reach it, so an answer
+	// given days later still gets back to the thing that asked.
+	if reply != "" {
+		stored.Reply, stored.Waiter = reply, os.Getpid()
+	}
+
+	id, err := rememberNotification(stored)
+	if err != nil {
 		reportError(err)
 	}
+
+	return id
 }
 
 // Deliver an answer to the pane the notification was sent from, typing it in
@@ -285,7 +306,14 @@ func dispatchNotify(args []string, isInternal bool) {
 	// sent rather than whenever the user got round to dismissing it.
 	sent := time.Now()
 
-	result, err := openNotifyOverlay(cfg, notification, args)
+	// A zero timeout is no timeout, and is the default: the caller has not put
+	// a limit on how long it will hold.
+	var deadline time.Time
+	if req.Timeout > 0 {
+		deadline = sent.Add(time.Duration(req.Timeout) * time.Second)
+	}
+
+	result, err := answerFromOverlay(cfg, notification, args, deadline)
 	if err != nil {
 		reportError(err)
 		return
@@ -295,10 +323,85 @@ func dispatchNotify(args []string, isInternal bool) {
 	case pkg.ActionSelect:
 		fmt.Println(strings.Join(result.Selected, "\n"))
 
+	case pkg.ActionTimeout:
+		// Nobody came to the popup in the time the caller had. What it asked is
+		// kept, as a plain message to be read and thrown away.
+		storeIgnored(req, notification, sent, "", true)
+
 	case pkg.ActionIgnore:
 		// An ignored notification is kept so it can be picked up later; a
 		// cleared one was dismissed on purpose, and is not.
-		storeIgnored(req, notification, sent)
+		if !req.Wait {
+			storeIgnored(req, notification, sent, "", false)
+			return
+		}
+		waitForLateAnswer(req, notification, sent, deadline)
+	}
+}
+
+// Open the popup and report what came of it. Past the deadline the popup is
+// taken off the screen and the notification reported as timed out, since a
+// caller that named a limit is not held past it.
+func answerFromOverlay(cfg Config, n pkg.Notification, args []string, deadline time.Time) (pkg.NotifyResult, error) {
+	type outcome struct {
+		result pkg.NotifyResult
+		err    error
+	}
+
+	done := make(chan outcome, 1)
+	go func() {
+		result, err := openNotifyOverlay(cfg, n, args)
+		done <- outcome{result, err}
+	}()
+
+	if deadline.IsZero() {
+		got := <-done
+		return got.result, got.err
+	}
+
+	select {
+	case got := <-done:
+		return got.result, got.err
+
+	case <-time.After(time.Until(deadline)):
+		// Closing the popup is what lets the process drawing it exit, so the
+		// call above can be collected rather than left running.
+		if err := pkg.TmuxClosePopup(); err != nil {
+			reportError(err)
+		}
+
+		// Whatever it reports now is the popup being taken away, not something
+		// the user did with it.
+		<-done
+		return pkg.NotifyResult{Action: pkg.ActionTimeout}, nil
+	}
+}
+
+// Stay on the line for a notification the user set aside, until it is answered
+// or thrown away wherever they get to it, or until the caller's time runs out.
+func waitForLateAnswer(req notifyRequest, n pkg.Notification, sent, deadline time.Time) {
+	reply, err := newReplyFile()
+	if err != nil {
+		reportError(err)
+		storeIgnored(req, n, sent, "", false)
+		return
+	}
+	defer os.Remove(reply)
+
+	id := storeIgnored(req, n, sent, reply, false)
+
+	switch answered := waitForAnswer(reply, deadline); answered.Action {
+	case pkg.ActionSelect:
+		if len(answered.Selected) > 0 {
+			fmt.Println(strings.Join(answered.Selected, "\n"))
+		}
+
+	case pkg.ActionTimeout:
+		// The notification outlives the caller that was waiting on it, as a
+		// plain message nobody owes an answer to.
+		if err := expireNotification(id); err != nil {
+			reportError(err)
+		}
 	}
 }
 
@@ -333,13 +436,17 @@ func showLast(cfg Config) {
 	}
 
 	if result.Action == pkg.ActionSelect && len(result.Selected) > 0 {
+		// Something still waiting on this notification is owed the answer
+		// before anyone else: it asked for it and has not given up.
+		delivered := releaseWaiter(stored, result)
+
 		// An orphaned notification has no pane left to answer into; anything
 		// else is worth trying, and may still turn out to have lost its pane.
-		delivered := !stored.Orphaned
-		if delivered {
+		if !delivered && !stored.Orphaned {
 			if err := replyToPane(stored, result.Selected); err != nil {
 				reportError(err)
-				delivered = false
+			} else {
+				delivered = true
 			}
 		}
 

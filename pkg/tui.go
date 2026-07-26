@@ -23,6 +23,10 @@ type NotifyColors struct {
 	Author    string
 	Selection string
 	Footer    string
+
+	// Expired is the colour a notification is drawn in once its caller has
+	// stopped waiting for an answer.
+	Expired string
 }
 
 // Notification is everything the TUI needs to draw a single notification.
@@ -39,6 +43,11 @@ type Notification struct {
 
 	Custom   bool
 	Multiple bool
+
+	// Expired marks a notification whose caller gave up waiting. It keeps what
+	// it said, but there is no longer anyone to answer, so it is drawn as a
+	// plain message that can only be thrown away.
+	Expired bool
 
 	Colors NotifyColors
 }
@@ -79,6 +88,10 @@ const (
 	ActionIgnore = "ignore"
 	ActionClear  = "clear"
 	ActionSelect = "select"
+
+	// ActionTimeout is not something the user does: it is what became of a
+	// notification whose caller stopped waiting before anyone answered.
+	ActionTimeout = "timeout"
 )
 
 const (
@@ -103,7 +116,9 @@ const (
 // Whether this notification asks the user to pick something, rather than just
 // telling them about it.
 func (n Notification) interactive() bool {
-	return len(n.Options) > 0 || n.Custom
+	// Nothing is left to pick once the caller has gone; the options would only
+	// offer an answer that has nowhere to go.
+	return !n.Expired && (len(n.Options) > 0 || n.Custom)
 }
 
 // Set up the model for a notification, ready to be run or measured.
@@ -147,6 +162,11 @@ func (m *notifyModel) setActive(active bool) {
 
 // The number of rows the user can move between.
 func (m notifyModel) rowCount() int {
+	// An expired notification has nothing to move between: what it asked is
+	// still worth reading, but there is nobody left to take the answer.
+	if m.notification.Expired {
+		return 0
+	}
 	if m.notification.Custom {
 		return len(m.notification.Options) + 1
 	}

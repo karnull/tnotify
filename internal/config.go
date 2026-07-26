@@ -22,6 +22,7 @@ type Config struct {
 		Author    string `toml:"author"`
 		Selection string `toml:"selection"`
 		Footer    string `toml:"footer"`
+		Expired   string `toml:"expired"`
 	} `toml:"colors"`
 
 	Sidepanel struct {
