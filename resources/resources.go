@@ -16,5 +16,5 @@ var Version = tnotify.Version
 //go:embed default.toml
 var DefaultConfig string
 
-//go:embed Skills.md
+//go:embed SKILL.md
 var Skill string
