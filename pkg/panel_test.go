@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -72,6 +73,7 @@ func (f *fakeSource) source() PanelSource {
 	}
 }
 
+<<<<<<< HEAD:pkg/panel_test.go
 <<<<<<<< HEAD:pkg/pkg_panel_test.go
 // A panel of the given size, already showing the source's notifications.
 func newTestPanel(t *testing.T, f *fakeSource, width, height int) tea.Model {
@@ -96,9 +98,28 @@ func newTestPanel(t *testing.T, f *fakeSource, width, height int) tea.Model {
 	return press(t, newPanel(f, PanelClock{}, width, height))
 }
 >>>>>>>> 5d0a602 (fixup! feat: list waiting notifications in a side panel):pkg/panel_test.go
+=======
+// A panel of the given size, drawing arrival times the given way.
+func newPanel(f *fakeSource, clock pkg.PanelClock, width, height int) tea.Model {
+	var model tea.Model = pkg.NewPanelModel(f.source(), clock)
 
-	var model tea.Model = pkg.NewPanelModel(f.source())
+	model, _ = model.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	return model
+}
 
+// A panel of the given size, already showing the source's notifications.
+func newTestPanel(t *testing.T, f *fakeSource, width, height int) tea.Model {
+	t.Helper()
+	return press(t, newPanel(f, pkg.PanelClock{}, width, height))
+}
+>>>>>>> 9e8613d (feat: stamp each notification with the time it arrived):test/pkg_panel_test.go
+
+// The one notification a source holds, arrived at the given time and drawn into
+// a panel of the given width with the default clock and date.
+func newClockPanel(t *testing.T, sent time.Time, width int) string {
+	t.Helper()
+
+<<<<<<< HEAD:pkg/panel_test.go
 <<<<<<<< HEAD:pkg/pkg_panel_test.go
 	model, _ = model.Update(tea.WindowSizeMsg{Width: width, Height: height})
 	return press(t, model)
@@ -111,6 +132,15 @@ func newTestPanel(t *testing.T, f *fakeSource, width, height int) tea.Model {
 	clock := PanelClock{Time: "15:04", Date: "02/01/2006"}
 	return press(t, newPanel(f, clock, width, 20)).View()
 >>>>>>>> 5d0a602 (fixup! feat: list waiting notifications in a side panel):pkg/panel_test.go
+=======
+	f := &fakeSource{
+		items:    []pkg.PanelItem{{ID: 1, Notification: pkg.Notification{Author: "deploy.sh", Body: "up"}, Sent: sent}},
+		answered: map[int][]string{},
+	}
+
+	clock := pkg.PanelClock{Time: "15:04", Date: "02/01/2006"}
+	return press(t, newPanel(f, clock, width, 20)).View()
+>>>>>>> 9e8613d (feat: stamp each notification with the time it arrived):test/pkg_panel_test.go
 }
 
 // Turn a key's name into the message bubbletea would deliver for it.
@@ -515,8 +545,11 @@ func TestBoxesAreNumberedFromOne(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/panel_test.go
 <<<<<<<< HEAD:pkg/pkg_panel_test.go
 ========
+=======
+>>>>>>> 9e8613d (feat: stamp each notification with the time it arrived):test/pkg_panel_test.go
 // A notification from today needs no date on it: a bare clock is read as today
 // already, and the border has little enough room as it is.
 func TestTodayIsDrawnAsAClockAlone(t *testing.T) {
@@ -567,7 +600,11 @@ func TestANotificationWithNoTimeIsDrawnWithout(t *testing.T) {
 func TestTheTimeGivesWayBeforeTheNumber(t *testing.T) {
 	sent := time.Now().AddDate(0, 0, -2)
 
+<<<<<<< HEAD:pkg/panel_test.go
 	for _, width := range []int{40, 28, 20, 14, minPanelWidth} {
+=======
+	for _, width := range []int{40, 28, 20, 14, pkg.MinPanelWidth} {
+>>>>>>> 9e8613d (feat: stamp each notification with the time it arrived):test/pkg_panel_test.go
 		view := newClockPanel(t, sent, width)
 
 		if !strings.Contains(view, "╭─ 1") {
@@ -594,7 +631,10 @@ func TestTheTimeGivesWayBeforeTheNumber(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/panel_test.go
 >>>>>>>> 5d0a602 (fixup! feat: list waiting notifications in a side panel):pkg/panel_test.go
+=======
+>>>>>>> 9e8613d (feat: stamp each notification with the time it arrived):test/pkg_panel_test.go
 // Going straight to a notification is the point of numbering them.
 func TestJumpingToANotificationByNumber(t *testing.T) {
 	f := newFakeSource()

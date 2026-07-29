@@ -15,7 +15,7 @@ import (
 
 const (
 	AuthorEnvVar  = authorEnvVar
-	HiddenSetting = colorHidden
+	HiddenSetting = hiddenSetting
 	OverlayBorder = overlayBorder
 	HelpMinWidth  = helpMinWidth
 	HelpMaxWidth  = helpMaxWidth
@@ -35,6 +35,7 @@ var (
 	ParentName             = parentName
 	ScriptArg              = scriptArg
 	NotifyColors           = notifyColors
+	DefaultConfig          = defaultConfig
 	FitOverlay             = fitOverlay
 	OverlayBounds          = overlayBounds
 	PlaceOverlay           = placeOverlay
@@ -52,6 +53,8 @@ var (
 	ExpireNotification     = expireNotification
 	ForgetNotification     = forgetNotification
 	ForgetNotifications    = forgetNotifications
+	PanelClock             = panelClock
+	PanelLoader            = panelLoader
 	StoredNotificationArgs = storedNotificationArgs
 	DecodeResult           = decodeResult
 	EncodeResult           = encodeResult

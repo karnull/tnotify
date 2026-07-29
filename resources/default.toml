@@ -14,6 +14,13 @@ expired   = "#6C6C6C"
 # direction: <left|right>
 direction = "right"
 width     = 40
+# The time each notification arrived, drawn in the top border of its box.
+# clock takes "24h", "12h", or a Go time layout of your own ("3:04 PM").
+clock     = "24h"
+# date is added to notifications that did not arrive today, and takes "dmy",
+# "mdy", "ymd"/"iso", or a layout ("02/01/2006").
+# Set either to "<hidden>" to leave that part off.
+date      = "dmy"
 
 [overlay]
 # location: <top|middle|bottom>-<left|center|right>

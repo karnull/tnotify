@@ -17,10 +17,23 @@ import (
 //- Types ------------------------------------------------------------------------------------------
 
 // PanelItem is one waiting notification as the side panel needs it: what to
-// draw, and the id whoever is keeping it knows it by.
+// draw, the id whoever is keeping it knows it by, and when it arrived.
 type PanelItem struct {
 	ID           int
 	Notification Notification
+
+	// When the notification was sent. A zero time is one nothing was recorded
+	// for, and is drawn without a time rather than as the epoch.
+	Sent time.Time
+}
+
+// PanelClock is how the panel draws the time a notification arrived, as Go
+// reference-time layouts: Time is the clock every notification gets, and Date
+// is added to anything that arrived before today, when a clock alone would not
+// say which day it means. An empty layout leaves that part off.
+type PanelClock struct {
+	Time string
+	Date string
 }
 
 // PanelSource is how the side panel reaches the notifications it lists. They
@@ -45,6 +58,7 @@ type PanelSource struct {
 type panelModel struct {
 	source PanelSource
 	colors NotifyColors
+	clock  PanelClock
 
 	items []PanelItem
 
@@ -411,11 +425,36 @@ func (m panelModel) warnStyle(width int) lipgloss.Style {
 		Width(width)
 }
 
-// The top of a box, with the number the panel knows the notification by set
-// into the border, along with anything there is to say about the notification
-// beside it. It is drawn here rather than left to lipgloss, which borders a
-// block but will not write anything into one.
-func (m panelModel) boxTop(number int, note string, style lipgloss.Style) string {
+// When a notification arrived, in the two parts the border carries it in: the
+// clock, and the date for anything that did not arrive today, since a clock on
+// its own would be read as meaning today whatever day it came from.
+func (m panelModel) stamp(sent time.Time) (clock, date string) {
+	if sent.IsZero() || m.clock.Time == "" {
+		return "", ""
+	}
+
+	// Drawn in the timezone the person reading the panel is in, whatever the
+	// notification was sent in.
+	sent = sent.Local()
+	clock = sent.Format(m.clock.Time)
+
+	if m.clock.Date == "" {
+		return clock, ""
+	}
+
+	year, month, day := time.Now().Date()
+	if sentYear, sentMonth, sentDay := sent.Date(); sentYear == year && sentMonth == month && sentDay == day {
+		return clock, ""
+	}
+
+	return clock, sent.Format(m.clock.Date)
+}
+
+// The top of a box: the number the panel knows the notification by set into the
+// border at one end, and the time it arrived at the other. It is drawn here
+// rather than left to lipgloss, which borders a block but will not write
+// anything into one.
+func (m panelModel) boxTop(number int, note, clock, date string, style lipgloss.Style) string {
 	border := lipgloss.RoundedBorder()
 
 	label := fmt.Sprintf("%s %d ", border.Top, number)
@@ -423,9 +462,40 @@ func (m panelModel) boxTop(number int, note string, style lipgloss.Style) string
 		label += fmt.Sprintf("%s %s ", border.Top, note)
 	}
 
-	fill := max(m.width-2-lipgloss.Width(label), 0)
+	// The time is given up a piece at a time as the panel narrows: first the
+	// date, which only the older notifications carry, and then the clock. The
+	// number stays whatever happens, since it is what a notification is named
+	// by, here and on the command line.
+	room := m.width - 2 - lipgloss.Width(label)
+	right, fill := "", room
 
-	return style.Render(border.TopLeft + label + strings.Repeat(border.Top, fill) + border.TopRight)
+	for _, stamp := range []string{strings.TrimSpace(clock + " " + date), clock} {
+		if stamp == "" {
+			continue
+		}
+
+		// A dash either side, so the time reads as set into the border rather
+		// than as running into the corner.
+		candidate := fmt.Sprintf("%s %s %s", border.Top, stamp, border.Top)
+
+		// One dash between the number and the time at the very least, or the
+		// two of them read as a single label.
+		if left := room - lipgloss.Width(candidate); left >= 1 {
+			right, fill = candidate, left
+			break
+		}
+	}
+
+	inner := label + strings.Repeat(border.Top, max(fill, 0)) + right
+
+	// A pane too narrow for even the number takes as much of it as will fit: a
+	// top row wider than the pane wraps onto the next, which takes apart every
+	// box below it.
+	if runes := []rune(inner); len(runes) > m.width-2 {
+		inner = string(runes[:max(m.width-2, 0)])
+	}
+
+	return style.Render(border.TopLeft + inner + border.TopRight)
 }
 
 // Draw one notification as a box of its own, numbered, and bordered in the
@@ -443,10 +513,9 @@ func (m panelModel) boxView(item PanelItem, box *notifyModel, number int, focuse
 		top = lipgloss.JoinVertical(lipgloss.Left, top, "", m.warnStyle(textWidth).Render(warnMark+failure))
 	}
 
-	colour := m.colors.Border
-
 	// A notification nobody is waiting on any more is greyed out, but the
 	// cursor still has to be findable, so focus wins over it.
+	colour := m.colors.Border
 	switch {
 	case focused:
 		colour = m.colors.Selection
@@ -460,6 +529,8 @@ func (m panelModel) boxView(item PanelItem, box *notifyModel, number int, focuse
 		note = "timeout"
 	}
 
+	clock, date := m.stamp(item.Sent)
+
 	// The top is drawn separately so the number can sit in it, so the rest of
 	// the box is bordered on three sides and joined underneath.
 	rest := lipgloss.NewStyle().
@@ -470,7 +541,7 @@ func (m panelModel) boxView(item PanelItem, box *notifyModel, number int, focuse
 		Width(m.width - boxBorder).
 		Render(top)
 
-	return m.boxTop(number, note, style) + "\n" + rest
+	return m.boxTop(number, note, clock, date, style) + "\n" + rest
 }
 
 // Every row of every box, one after another, along with where the focused box
@@ -694,10 +765,11 @@ func (m panelModel) View() string {
 // with delete. Enter opens the one under the cursor, moving those same keys
 // onto its options, where enter sends the answer back to the pane the
 // notification came from and escape backs out again.
-func RunPanelTUI(colors NotifyColors, source PanelSource) error {
+func RunPanelTUI(colors NotifyColors, clock PanelClock, source PanelSource) error {
 	model := panelModel{
 		source:   source,
 		colors:   colors,
+		clock:    clock,
 		boxes:    map[int]*notifyModel{},
 		failures: map[int]string{},
 	}

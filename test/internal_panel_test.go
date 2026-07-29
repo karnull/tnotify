@@ -5,6 +5,7 @@ package test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/karnull/tnotify/internal"
 )
@@ -110,5 +111,65 @@ func TestAnsweringOneThatHasGone(t *testing.T) {
 
 	if err := internal.AnswerNotification(999, []string{"yes"}); err != nil {
 		t.Errorf("answerNotification(999) returned error: %v", err)
+	}
+}
+
+// The clock and date the config names have to reach the panel as the layouts it
+// draws with, whether they were given as a convention or written out in full.
+func TestPanelClockResolvesTheConfig(t *testing.T) {
+	tests := []struct {
+		name               string
+		clock, date        string
+		wantTime, wantDate string
+	}{
+		{name: "the shipped default", clock: "24h", date: "dmy", wantTime: "15:04", wantDate: "02/01/2006"},
+		{name: "a twelve hour clock", clock: "12h", date: "mdy", wantTime: "3:04 PM", wantDate: "01/02/2006"},
+		{name: "named however it is spelt", clock: "24H", date: "ISO", wantTime: "15:04", wantDate: "2006-01-02"},
+
+		// A config predating these settings is not one asking to go without.
+		{name: "a config that says nothing", wantTime: "15:04", wantDate: "02/01/2006"},
+
+		// Anything the presets do not cover is a layout in its own right, which
+		// is what makes a format they do not offer possible at all.
+		{name: "a layout of the user's own", clock: "15:04:05", date: "Mon 2 Jan", wantTime: "15:04:05", wantDate: "Mon 2 Jan"},
+
+		{name: "the date switched off", clock: "24h", date: internal.HiddenSetting, wantTime: "15:04"},
+		{name: "the time switched off", clock: internal.HiddenSetting, date: "dmy", wantDate: "02/01/2006"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var cfg internal.Config
+			cfg.Sidepanel.Clock, cfg.Sidepanel.Date = test.clock, test.date
+
+			got := internal.PanelClock(cfg)
+			if got.Time != test.wantTime || got.Date != test.wantDate {
+				t.Errorf("panelClock(clock %q, date %q) = %q/%q, want %q/%q",
+					test.clock, test.date, got.Time, got.Date, test.wantTime, test.wantDate)
+			}
+		})
+	}
+}
+
+// The panel draws the time a notification arrived, so the store has to hand it
+// over along with everything else.
+func TestPanelLoaderCarriesTheArrivalTime(t *testing.T) {
+	tempStore(t)
+
+	sent := time.Date(2026, time.August, 17, 9, 41, 0, 0, time.Local)
+	if _, err := internal.RememberNotification(internal.StoredNotification{Body: "staging is up", Sent: sent}); err != nil {
+		t.Fatalf("rememberNotification() returned error: %v", err)
+	}
+
+	items, err := internal.PanelLoader(internal.DefaultConfig())()
+	if err != nil {
+		t.Fatalf("panel loader returned error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("panel loader returned %d notifications, want 1", len(items))
+	}
+
+	if !items[0].Sent.Equal(sent) {
+		t.Errorf("panel item sent at %v, want %v", items[0].Sent, sent)
 	}
 }
