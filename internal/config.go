@@ -28,6 +28,11 @@ type Config struct {
 	Sidepanel struct {
 		Direction string `toml:"direction"`
 		Width     int    `toml:"width"`
+
+		// How the time a notification arrived is drawn on its box: a name the
+		// presets know, or a Go time layout of the user's own.
+		Clock string `toml:"clock"`
+		Date  string `toml:"date"`
 	} `toml:"sidepanel"`
 
 	Overlay struct {

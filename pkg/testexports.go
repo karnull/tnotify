@@ -12,6 +12,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+//- Constants --------------------------------------------------------------------------------------
+
+const MinPanelWidth = minPanelWidth
+
 //- Types ------------------------------------------------------------------------------------------
 
 type (
@@ -28,9 +32,10 @@ var (
 
 // NewPanelModel is a panel reading from the given source, before it has
 // been given a size or anything to list.
-func NewPanelModel(source PanelSource) panelModel {
+func NewPanelModel(source PanelSource, clock PanelClock) panelModel {
 	return panelModel{
 		source:   source,
+		clock:    clock,
 		boxes:    map[int]*notifyModel{},
 		failures: map[int]string{},
 	}

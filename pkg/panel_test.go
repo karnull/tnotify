@@ -7,10 +7,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -91,7 +91,10 @@ func newTestPanel(t *testing.T, f *fakeSource, width, height int) tea.Model {
 	return press(t, newPanel(f, PanelClock{}, width, height))
 }
 
-	var model tea.Model = pkg.NewPanelModel(f.source())
+// The one notification a source holds, arrived at the given time and drawn into
+// a panel of the given width with the default clock and date.
+func newClockPanel(t *testing.T, sent time.Time, width int) string {
+	t.Helper()
 
 	f := &fakeSource{
 		items:    []PanelItem{{ID: 1, Notification: Notification{Author: "deploy.sh", Body: "up"}, Sent: sent}},

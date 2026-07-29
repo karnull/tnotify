@@ -15,8 +15,8 @@ import (
 // opened it can print the answer in the original terminal.
 const resultEnvVar = "TNOTIFY_RESULT"
 
-// A colour set to this in the config switches that element off instead.
-const colorHidden = "<hidden>"
+// A setting given this value in the config switches that element off instead.
+const hiddenSetting = "<hidden>"
 
 // What a timed-out notification is drawn in when the config predates having a
 // colour for it: grey enough to read as spent without disappearing.
@@ -49,7 +49,7 @@ func notifyColors(cfg Config) pkg.NotifyColors {
 	}
 
 	// An empty footer colour is how the TUI is told to leave the footer out.
-	if colors.Footer == colorHidden {
+	if colors.Footer == hiddenSetting {
 		colors.Footer = ""
 	}
 

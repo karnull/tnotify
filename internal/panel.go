@@ -4,6 +4,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/karnull/tnotify/pkg"
@@ -13,7 +14,60 @@ import (
 // slower cadence than the store reads that carry it.
 const panelReapEvery = 5 * time.Second
 
+// The clock and date settings the config names, and the Go time layouts they
+// stand for. A setting that is none of these is taken to be a layout already,
+// so a format the presets do not cover can still be had.
+var (
+	clockPresets = map[string]string{
+		"24h": "15:04",
+		"12h": "3:04 PM",
+	}
+
+	datePresets = map[string]string{
+		"dmy": "02/01/2006",
+		"mdy": "01/02/2006",
+		"ymd": "2006-01-02",
+		"iso": "2006-01-02",
+	}
+)
+
+// What the panel falls back to when the config says nothing: a 24-hour clock,
+// and a day-first date on anything that did not arrive today.
+const (
+	defaultClock = "24h"
+	defaultDate  = "dmy"
+)
+
 //- Private Helpers --------------------------------------------------------------------------------
+
+// Resolve one time setting to the Go layout it means. An empty setting is a
+// config written before it existed, which gets the default rather than no time
+// at all; "<hidden>" is how that part is asked for and left off.
+func timeLayout(setting, fallback string, presets map[string]string) string {
+	setting = strings.TrimSpace(setting)
+	if setting == "" {
+		setting = fallback
+	}
+
+	if setting == hiddenSetting {
+		return ""
+	}
+
+	if layout, ok := presets[strings.ToLower(setting)]; ok {
+		return layout
+	}
+
+	return setting
+}
+
+// Translate the config's [sidepanel] clock and date into the layouts the panel
+// draws each notification's arrival time with.
+func panelClock(cfg Config) pkg.PanelClock {
+	return pkg.PanelClock{
+		Time: timeLayout(cfg.Sidepanel.Clock, defaultClock, clockPresets),
+		Date: timeLayout(cfg.Sidepanel.Date, defaultDate, datePresets),
+	}
+}
 
 // Build the call the panel reads notifications through, which also keeps the
 // store's record of which panes have closed from going stale while the panel
@@ -39,7 +93,11 @@ func panelLoader(cfg Config) func() ([]pkg.PanelItem, error) {
 
 		items := make([]pkg.PanelItem, 0, len(stored))
 		for _, n := range stored {
-			items = append(items, pkg.PanelItem{ID: n.ID, Notification: storedNotificationView(n, cfg)})
+			items = append(items, pkg.PanelItem{
+				ID:           n.ID,
+				Notification: storedNotificationView(n, cfg),
+				Sent:         n.Sent,
+			})
 		}
 
 		return items, nil
@@ -87,7 +145,7 @@ func runPanelTUI(cfg Config) {
 		Delete: forgetNotification,
 	}
 
-	if err := pkg.RunPanelTUI(notifyColors(cfg), source); err != nil {
+	if err := pkg.RunPanelTUI(notifyColors(cfg), panelClock(cfg), source); err != nil {
 		reportError(err)
 	}
 }
