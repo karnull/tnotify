@@ -76,35 +76,28 @@ func helpContent() (usage []string, sections []helpSection) {
 		{title: "COMMANDS", spaced: true, entries: []helpEntry{
 			{term: "notify <body>", desc: "Send a notification, <body> being its message"},
 			{term: "--head <heading>", under: true, desc: "Heading shown above the message"},
-			{term: "--author <name>", under: true, desc: "Who sent it; defaults to $TNOTIFY_AUTHOR, else the calling script or program"},
-			{term: "--interactive [<option>...]", under: true, desc: "Offer options to pick from; the chosen one is printed in the original terminal"},
+			{term: "--author <name>", under: true, desc: "Who sent it; defaults to $TNOTIFY_AUTHOR, else the calling script"},
+			{term: "--interactive [<option>...]", under: true, desc: "Offer options to pick from"},
 			{term: "--custom", under: true, desc: "Add a text box to type an answer in; requires --interactive"},
 			{term: "--multiple", under: true, desc: "Select several options with space; requires --interactive"},
 			{term: "--wait", under: true, desc: "Hold for an answer given later, however long that takes"},
 			{term: "--timeout <seconds>", under: true, desc: "Give up waiting after this long; implies --wait. Zero, the default, is no limit"},
 
 			{term: "show", desc: "Display the notification history"},
-			{term: "--all", under: true, desc: "List every waiting notification in a side panel, each in a numbered box of its own. Move between them with the arrow keys or j/k, go straight to one with :<number> and [enter], throw one away with [del], and open the one in focus with [enter] to pick from its options; [esc] closes it again and [q] closes the panel. An answer given here is typed into the pane the notification was sent from, the same way \"show --last\" delivers one"},
-			{term: "--last", under: true, desc: "Raise the most recently ignored notification again, as it first arrived, to answer now. The answer is typed into the pane it was sent from, without being run; ignoring it again leaves it waiting"},
+			{term: "--all", under: true, desc: "List every waiting notification in a side panel to answer or clear"},
+			{term: "--last", under: true, desc: "Raise the most recently ignored notification to answer now"},
 
-			{term: "clear [<number>...]", desc: "Throw notifications away without answering them, each <number> being one the side panel draws on a box, or a range of them (e.g. 1 2 4-5). Commas between the numbers are allowed"},
+			{term: "clear [<number>...]", desc: "Throw notifications away without answering them, by number or range (e.g. 1 2 4-5)"},
 			{term: "--all", under: true, desc: "Clear every waiting notification"},
 			{term: "--head <n>", under: true, desc: "Clear the <n> that have been waiting longest"},
 			{term: "--tail <n>", under: true, desc: "Clear the <n> that arrived most recently"},
-			{term: "--author <name>", under: true, desc: "Clear only what this author sent. On its own it clears all of them; with --all, --head or --tail it narrows those to that author. It cannot be given alongside numbers, which always count from the whole list"},
+			{term: "--author <name>", under: true, desc: "Clear only what this author sent; cannot be given alongside numbers"},
 		}},
-
-		{title: "NOTES", prose: `An ignored notification is kept, so that "show --last" can raise it again and answer it later; one cleared with [del] is not. The pane a notification was sent from is retitled "tnotify:<n>" while it is waiting, and put back once nothing is. A notification whose pane has since closed is orphaned: it can still be read and answered, but its answer is printed rather than sent.`},
 
 		{title: "ENVIRONMENT", entries: []helpEntry{
-			{term: "TNOTIFY_AUTHOR", desc: "Name recorded as the sender when --author is not given. The caller that actually ran tnotify is recorded alongside it either way"},
+			{term: "TNOTIFY_AUTHOR", desc: "Name recorded as the sender when --author is not given"},
 			{term: "TNOTIFY_COUNT", desc: "Set by tnotify in tmux's global environment: how many notifications are waiting. Read it in a status line as #{TNOTIFY_COUNT}"},
 			{term: "XDG_STATE_HOME", desc: "Where ignored notifications are kept; defaults to ~/.local/state"},
-		}},
-
-		{title: "FILES", entries: []helpEntry{
-			{term: "~/.config/tnotify/config.toml"},
-			{term: "~/.local/state/tnotify/notifications.json"},
 		}},
 	}
 
