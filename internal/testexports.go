@@ -35,6 +35,7 @@ var (
 	ParentName             = parentName
 	ScriptArg              = scriptArg
 	NotifyColors           = notifyColors
+	NotifyCursor           = notifyCursor
 	DefaultConfig          = defaultConfig
 	FitOverlay             = fitOverlay
 	OverlayBounds          = overlayBounds

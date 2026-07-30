@@ -25,6 +25,13 @@ type Config struct {
 		Expired   string `toml:"expired"`
 	} `toml:"colors"`
 
+	// The marker drawn against the option under the cursor, which can differ
+	// between a notification that picks one option and one that ticks several.
+	Cursor struct {
+		Single   string `toml:"single"`
+		Multiple string `toml:"multiple"`
+	} `toml:"cursor"`
+
 	Sidepanel struct {
 		Direction string `toml:"direction"`
 		Width     int    `toml:"width"`
@@ -37,7 +44,6 @@ type Config struct {
 
 	Overlay struct {
 		Location  string `toml:"location"`
-		Stack     bool   `toml:"stack"`
 		Timeout   int    `toml:"timeout"`
 		MinWidth  int    `toml:"min_width"`
 		MaxWidth  int    `toml:"max_width"`
