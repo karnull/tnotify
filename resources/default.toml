@@ -10,6 +10,13 @@ footer    = "#874BFD"
 # Notifications whose caller stopped waiting for an answer.
 expired   = "#6C6C6C"
 
+[cursor]
+# The marker drawn against the option under the cursor: single where one option
+# is picked, multiple where several can be ticked with space (--multiple).
+# Set either to "<hidden>" to go without, leaving the colour to pick the row out.
+single   = "▶"
+multiple = "☐"
+
 [sidepanel]
 # direction: <left|right>
 direction = "right"

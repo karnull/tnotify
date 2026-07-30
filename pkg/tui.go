@@ -29,6 +29,15 @@ type NotifyColors struct {
 	Expired string
 }
 
+// NotifyCursor holds the markers drawn against the option under the cursor,
+// taken from the [cursor] section of the config: Single where one option is
+// picked, Multiple where several can be ticked at once. An empty one leaves the
+// marker off, and the row is left to its colour to pick out.
+type NotifyCursor struct {
+	Single   string
+	Multiple string
+}
+
 // Notification is everything the TUI needs to draw a single notification.
 //
 // With no Options and no Custom it is a plain message the user can only
@@ -50,6 +59,7 @@ type Notification struct {
 	Expired bool
 
 	Colors NotifyColors
+	Cursor NotifyCursor
 }
 
 // NotifyResult is the outcome of showing a notification. Selected holds the
@@ -106,12 +116,28 @@ const (
 	// MinWidth is the fewest columns the TUI can be drawn into: the padding
 	// either side and a single column of text.
 	MinWidth = padX*2 + 1
-
-	cursorMark   = "❯ "
-	noCursorMark = "  "
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
+
+// The marker drawn against the option under the cursor, and the blank standing
+// in for it on every other row. The blank is measured from the marker rather
+// than assumed, so the labels line up under whatever the config asks for.
+func (n Notification) cursorMarks() (mark, blank string) {
+	mark = n.Cursor.Single
+	if n.Multiple {
+		mark = n.Cursor.Multiple
+	}
+
+	if mark == "" {
+		return "", ""
+	}
+
+	// A space of its own, so the marker does not run into the number it points at.
+	mark += " "
+
+	return mark, strings.Repeat(" ", lipgloss.Width(mark))
+}
 
 // Whether this notification asks the user to pick something, rather than just
 // telling them about it.
@@ -284,12 +310,14 @@ func (m notifyModel) optionRows(textWidth int) []string {
 	indexWidth := len(strconv.Itoa(m.rowCount()))
 	rows := make([]string, 0, m.rowCount())
 
+	mark, blank := m.notification.cursorMarks()
+
 	for i := range m.rowCount() {
 		onRow := i == m.cursor && !m.inactive
 
-		prefix := noCursorMark
+		prefix := blank
 		if onRow {
-			prefix = cursorMark
+			prefix = mark
 		}
 		prefix += fmt.Sprintf("%*d. ", indexWidth, i+1)
 

@@ -56,6 +56,31 @@ func notifyColors(cfg Config) pkg.NotifyColors {
 	return colors
 }
 
+// Resolve one configured marker: what the config asks for, the shipped default
+// when it asks for nothing, and nothing at all when it asks for "<hidden>".
+func cursorMark(set, shipped string) string {
+	switch set {
+	case "":
+		return shipped
+	case hiddenSetting:
+		return ""
+	}
+	return set
+}
+
+// Translate the config's [cursor] into the markers the TUI draws the option
+// under the cursor with. A config written before the section existed falls back
+// to the shipped markers rather than one mark for both, so picking one option
+// still looks different from ticking several.
+func notifyCursor(cfg Config) pkg.NotifyCursor {
+	shipped := defaultConfig()
+
+	return pkg.NotifyCursor{
+		Single:   cursorMark(cfg.Cursor.Single, shipped.Cursor.Single),
+		Multiple: cursorMark(cfg.Cursor.Multiple, shipped.Cursor.Multiple),
+	}
+}
+
 // Create the empty file an overlay reports its selection through, returning the
 // path and a function that removes it.
 func newResultFile() (path string, cleanup func(), err error) {
@@ -90,6 +115,7 @@ func buildNotification(req notifyRequest, cfg Config) pkg.Notification {
 		Custom:   req.Custom,
 		Multiple: req.Multiple,
 		Colors:   notifyColors(cfg),
+		Cursor:   notifyCursor(cfg),
 	}
 }
 
@@ -107,6 +133,7 @@ func storedNotificationView(stored storedNotification, cfg Config) pkg.Notificat
 		Multiple: stored.Multiple,
 		Expired:  stored.Expired,
 		Colors:   notifyColors(cfg),
+		Cursor:   notifyCursor(cfg),
 	}
 }
 

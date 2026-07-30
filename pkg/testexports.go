@@ -27,7 +27,8 @@ type (
 //- Functions --------------------------------------------------------------------------------------
 
 var (
-	SplitFlags = splitFlags
+	NewNotifyModel = newNotifyModel
+	SplitFlags     = splitFlags
 )
 
 // NewPanelModel is a panel reading from the given source, before it has
@@ -62,7 +63,8 @@ func (m panelModel) Revision() int            { return m.revision }
 
 //- Notification State -----------------------------------------------------------------------------
 
-func (m notifyModel) OnInput() bool { return m.onInput() }
+func (m notifyModel) OptionRows(textWidth int) []string { return m.optionRows(textWidth) }
+func (m notifyModel) OnInput() bool                     { return m.onInput() }
 
 func (m notifyModel) Cursor() int            { return m.cursor }
 func (m notifyModel) Checked() []bool        { return m.checked }
