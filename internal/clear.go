@@ -222,12 +222,12 @@ func selectForClearing(req clearRequest, waiting []storedNotification) ([]stored
 }
 
 // Dispatch "clear": throw away the notifications the command line names,
-// without answering them.
-func dispatchClear(args []string) {
+// without answering them, and report the status to exit with.
+func dispatchClear(args []string) int {
 	req, err := parseClear(args)
 	if err != nil {
 		reportError(err)
-		return
+		return exitFailure
 	}
 
 	// A notification whose pane has closed has no title to give back, and
@@ -238,18 +238,20 @@ func dispatchClear(args []string) {
 	waiting, err := allNotifications()
 	if err != nil {
 		reportError(err)
-		return
+		return exitFailure
 	}
 
 	picked, err := selectForClearing(req, waiting)
 	if err != nil {
 		reportError(err)
-		return
+		return exitFailure
 	}
 
+	// Nothing to clear is not a failure: the notifications the command line
+	// named are gone either way, which is what it asked for.
 	if len(picked) == 0 {
 		fmt.Println("no notifications to clear")
-		return
+		return exitSuccess
 	}
 
 	ids := make([]int, 0, len(picked))
@@ -260,8 +262,10 @@ func dispatchClear(args []string) {
 	cleared, err := forgetNotifications(ids)
 	if err != nil {
 		reportError(err)
-		return
+		return exitFailure
 	}
 
 	fmt.Printf("cleared %d of %d notifications\n", cleared, len(waiting))
+
+	return exitSuccess
 }

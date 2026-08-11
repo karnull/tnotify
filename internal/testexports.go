@@ -14,6 +14,8 @@ import (
 //- Constants --------------------------------------------------------------------------------------
 
 const (
+	ExitSuccess   = exitSuccess
+	ExitFailure   = exitFailure
 	AuthorEnvVar  = authorEnvVar
 	HiddenSetting = hiddenSetting
 	OverlayBorder = overlayBorder
@@ -31,6 +33,8 @@ type (
 //- Functions --------------------------------------------------------------------------------------
 
 var (
+	DispatchClear          = dispatchClear
+	DispatchShow           = dispatchShow
 	DefaultAuthor          = defaultAuthor
 	ParentName             = parentName
 	ScriptArg              = scriptArg

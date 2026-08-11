@@ -16,10 +16,10 @@ Do not use for: anything you can decide yourself, anything trivial, anything alr
 ## Preflight
 
 ```bash
-[ -n "$TMUX" ] && tmux list-clients -F x | grep -q x && echo usable
+tnotify --check
 ```
 
-Both conditions are required. Otherwise ask in your own output instead.
+Exit 0 means this pane is in a tmux session with a client attached to see the popup. Anything else — no tmux, or a session nobody is watching: ask in your own output instead.
 
 ## Invocation
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/karnull/tnotify/pkg"
 	"github.com/karnull/tnotify/resources"
 )
 
@@ -17,6 +18,14 @@ import (
 const (
 	cliAccentColor = "#874BFD"
 	cliTermColor   = "#04B575"
+)
+
+// What tnotify exits with. "notify" stands outside this and always succeeds: an
+// unanswered question is not a failure, and a caller reading the answer off
+// stdout under "set -e" should not be killed by one.
+const (
+	exitSuccess = 0
+	exitFailure = 1
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -50,6 +59,16 @@ func skillText() {
 	fmt.Print(resources.Skill)
 }
 
+// Implements --check: report through the exit status alone whether tnotify has
+// anywhere to draw, so a caller can gate on it without reading any output.
+func checkUsable() int {
+	if !pkg.TmuxHasClient() {
+		return exitFailure
+	}
+
+	return exitSuccess
+}
+
 // Determine which show mode was requested, or "default" when none was given.
 func showMode(args []string) (string, error) {
 	mode := "default"
@@ -79,12 +98,13 @@ func showMode(args []string) (string, error) {
 
 //- Public Calls -----------------------------------------------------------------------------------
 
-// Route a command line to the command or flag it names. isInternal is true when
-// this process was relaunched by tnotify itself to do the work inside tmux.
-func ProcessArgs(args []string, isInternal bool) {
+// Route a command line to the command or flag it names, returning the status to
+// exit with. isInternal is true when this process was relaunched by tnotify
+// itself to do the work inside tmux.
+func ProcessArgs(args []string, isInternal bool) int {
 	if len(args) == 0 {
 		helpText()
-		return
+		return exitSuccess
 	}
 
 	switch cmd := args[0]; cmd {
@@ -92,6 +112,8 @@ func ProcessArgs(args []string, isInternal bool) {
 		helpText()
 	case "--version", "-v":
 		fmt.Println(strings.TrimSpace(resources.Version))
+	case "--check":
+		return checkUsable()
 	case "--skill":
 		skillText()
 	case "--config":
@@ -99,13 +121,20 @@ func ProcessArgs(args []string, isInternal bool) {
 	case "--defaults":
 		resetConfig()
 	case "notify":
+		// Always a success, whatever became of the question: see above.
 		dispatchNotify(args[1:], isInternal)
 	case "show":
-		dispatchShow(args[1:], isInternal)
+		return dispatchShow(args[1:], isInternal)
 	case "clear":
-		dispatchClear(args[1:])
+		return dispatchClear(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command or flag: %s\n", cmd)
 		helpText()
+
+		// A command line that named nothing tnotify has did not do what it was
+		// asked, whatever the help printed after it says.
+		return exitFailure
 	}
+
+	return exitSuccess
 }

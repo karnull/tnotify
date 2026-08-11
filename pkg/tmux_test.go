@@ -34,6 +34,33 @@ func TestSplitFlagsTakesTheVerticalSides(t *testing.T) {
 	}
 }
 
+// A popup needs somebody at the session it is drawn on. tmux answers with a
+// count of the clients attached to it, and anything else it says is no promise
+// that there is one.
+func TestAttachedClientsTakesOnlyACount(t *testing.T) {
+	tests := []struct {
+		reading string
+		want    bool
+	}{
+		{"1", true},
+		{"2", true},
+		{" 1 \n", true},
+		{"0", false},
+		{"", false},
+		// A format tmux could not resolve comes back as it was written, and
+		// reading that as somebody watching is how a popup goes unseen.
+		{"#{session_attached}", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.reading, func(t *testing.T) {
+			if got := attachedClients(test.reading); got != test.want {
+				t.Errorf("attachedClients(%q) = %v, want %v", test.reading, got, test.want)
+			}
+		})
+	}
+}
+
 // A side the panel cannot be put on is worth saying so about: quietly opening
 // it somewhere else would leave the config looking like it had been honoured.
 func TestSplitFlagsRejectsAnythingElse(t *testing.T) {
