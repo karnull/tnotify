@@ -21,8 +21,9 @@ func splitInternal(args []string) (rest []string, isInternal bool) {
 
 //- Public Calls -----------------------------------------------------------------------------------
 
-// Entry point: hand the command line to the CLI.
+// Entry point: hand the command line to the CLI, and exit with whatever it
+// makes of it.
 func main() {
 	args, isInternal := splitInternal(os.Args[1:])
-	internal.ProcessArgs(args, isInternal)
+	os.Exit(internal.ProcessArgs(args, isInternal))
 }

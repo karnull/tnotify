@@ -85,12 +85,42 @@ func splitFlags(side string) ([]string, error) {
 	}
 }
 
+// Whether a "#{session_attached}" reading says somebody is watching. tmux
+// answers with a count, and anything it could not count is taken as nobody
+// there rather than as somebody who might be.
+func attachedClients(reading string) bool {
+	count, err := strconv.Atoi(strings.TrimSpace(reading))
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
 //- Public Calls -----------------------------------------------------------------------------------
 
 // Whether this process is running inside a tmux session. Worth asking before
 // anything tmux is merely told about, as opposed to asked for.
 func InsideTmux() bool {
 	return tmux.IsInsideTmux()
+}
+
+// Whether a client is attached to this pane's own session, meaning there is a
+// screen for a popup to be drawn on. Being inside a session is not enough on its
+// own: a detached session has panes running in it that nobody is looking at, and
+// a client attached to some other session is no help to a popup drawn here.
+func TmuxHasClient() bool {
+	if !tmux.IsInsideTmux() {
+		return false
+	}
+
+	// Asked of this session rather than the server, which would answer for
+	// every session at once and call a detached one watched.
+	stdout, _, err := tmux.RunCmd([]string{"display-message", "-p", "#{session_attached}"})
+	if err != nil {
+		return false
+	}
+
+	return attachedClients(stdout)
 }
 
 // Return the size of the tmux client displaying the current pane, in cells.

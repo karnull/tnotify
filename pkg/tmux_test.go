@@ -34,8 +34,11 @@ func TestSplitFlagsTakesTheVerticalSides(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD:pkg/tmux_test.go
 <<<<<<< HEAD:test/pkg_tmux_test.go
 =======
+=======
+>>>>>>> 80f89d1 (feat: report through the exit status whether a popup can be seen):test/pkg_tmux_test.go
 // A popup needs somebody at the session it is drawn on. tmux answers with a
 // count of the clients attached to it, and anything else it says is no promise
 // that there is one.
@@ -56,14 +59,21 @@ func TestAttachedClientsTakesOnlyACount(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.reading, func(t *testing.T) {
+<<<<<<< HEAD:pkg/tmux_test.go
 			if got := attachedClients(test.reading); got != test.want {
+=======
+			if got := pkg.AttachedClients(test.reading); got != test.want {
+>>>>>>> 80f89d1 (feat: report through the exit status whether a popup can be seen):test/pkg_tmux_test.go
 				t.Errorf("attachedClients(%q) = %v, want %v", test.reading, got, test.want)
 			}
 		})
 	}
 }
 
+<<<<<<< HEAD:pkg/tmux_test.go
 >>>>>>> 4f319b7 (fixup! feat: launch tnotify inside panes and popups):pkg/tmux_test.go
+=======
+>>>>>>> 80f89d1 (feat: report through the exit status whether a popup can be seen):test/pkg_tmux_test.go
 // A side the panel cannot be put on is worth saying so about: quietly opening
 // it somewhere else would leave the config looking like it had been honoured.
 func TestSplitFlagsRejectsAnythingElse(t *testing.T) {

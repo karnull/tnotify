@@ -85,7 +85,7 @@ func TestHelpAlignsDescriptions(t *testing.T) {
 	row := regexp.MustCompile(`^ +--?\S.*?\s{2,}(\S)`)
 
 	column := -1
-	for _, line := range strings.Split(help, "\n") {
+	for line := range strings.SplitSeq(help, "\n") {
 		match := row.FindStringSubmatchIndex(line)
 		if match == nil {
 			continue
@@ -110,7 +110,7 @@ func TestHelpDocumentsEveryCommandAndFlag(t *testing.T) {
 	help := helpAt(helpMaxWidth)
 
 	for _, want := range []string{
-		"--help", "--version", "--skill", "--config", "--defaults",
+		"--help", "--version", "--check", "--skill", "--config", "--defaults",
 		"notify", "--head", "--author", "--interactive", "--custom", "--multiple",
 		"show", "--all", "--last",
 		"clear", "--tail",
