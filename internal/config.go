@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -125,6 +126,10 @@ func defaultConfig() Config {
 	toml.Decode(resources.DefaultConfig, &cfg)
 	return cfg
 }
+
+// The shipped config, decoded once. It never changes, and the side panel asks
+// for it on every notification it draws on every poll.
+var shippedConfig = sync.OnceValue(defaultConfig)
 
 //- Public Calls -----------------------------------------------------------------------------------
 

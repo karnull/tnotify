@@ -110,7 +110,7 @@ func TestHelpDocumentsEveryCommandAndFlag(t *testing.T) {
 	help := helpAt(helpMaxWidth)
 
 	for _, want := range []string{
-		"--help", "--version", "--check", "--skill", "--config", "--defaults",
+		"--help", "--version", "--check", "--skill", "--skill-export", "--config", "--defaults",
 		"notify", "--head", "--author", "--interactive", "--custom", "--multiple",
 		"show", "--all", "--last",
 		"clear", "--tail",

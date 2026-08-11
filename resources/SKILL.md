@@ -1,6 +1,6 @@
 ---
 name: tnotify
-description: Ask the user a question in a tmux popup instead of only in this pane, so it is seen from whichever tmux window they are actually looking at. Use for confirmations, choices and clarifications when the user may not be watching the agent's pane.
+description: Ask the user any question in a tmux popup instead of only in this pane, so it is seen from whichever tmux window they are actually looking at. Use for every question you put to the user — confirmations, choices, clarifications, anything you would otherwise ask in your own output or via AskUserQuestion — whenever a tmux client is attached.
 ---
 
 # tnotify
@@ -9,9 +9,13 @@ Your questions only appear in your own pane. `tnotify` draws them as a tmux popu
 
 ## When
 
-Use for: irreversible actions (force push, destructive migration, deletion, anything outward-facing); genuine ambiguity you cannot resolve from the repo; a long job finishing with nothing left to do.
+**Every question you put to the user goes through the popup, once preflight passes.** The user is rarely looking at your pane; a question asked only there is a question they never see.
 
-Do not use for: anything you can decide yourself, anything trivial, anything already settled this session, or two popups in a row — batch with `--multiple`.
+This covers all of it — confirming an irreversible action, resolving an ambiguity, picking between approaches, a throwaway one-liner, and anything you would otherwise have asked in your own output or handed to `AskUserQuestion`. There is no question small enough to be exempt. Also popup a long job finishing with nothing left to do.
+
+The only exemption is a failed preflight: no tmux, or no client attached. Then the popup has no audience and you ask in your own output instead.
+
+This rule is about *where* you ask, not *whether*. It does not license extra questions: still decide for yourself anything you can decide from the repo, and do not reopen what is already settled this session. And never fire two popups in a row — batch them with `--multiple`.
 
 ## Preflight
 
