@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/karnull/tnotify/pkg"
 	"github.com/karnull/tnotify/resources"
 )
@@ -38,25 +37,6 @@ func reportError(err error) {
 // Print the help documentation to stderr, laid out for the terminal it lands in.
 func helpText() {
 	fmt.Fprint(os.Stderr, renderHelp(os.Stderr))
-}
-
-// Say what the skill is and where it belongs. It goes to stderr so that the
-// redirection it describes leaves the file with nothing but the skill in it,
-// and leaves this on the screen where it can be read.
-func skillNote(file *os.File) string {
-	renderer := lipgloss.NewRenderer(file)
-	command := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
-	path := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
-
-	return "Run " + command.Render("tnotify --skill > SKILL.md") + " in your agent's skills directory,\n" +
-		"e.g. " + path.Render("~/.claude/skills/tnotify/SKILL.md") + " for Claude Code.\n"
-}
-
-// Implements --skill: write the skill to stdout, where it can be redirected
-// into a file, and how to install it to stderr, where it cannot.
-func skillText() {
-	fmt.Fprint(os.Stderr, skillNote(os.Stderr))
-	fmt.Print(resources.Skill)
 }
 
 // Implements --check: report through the exit status alone whether tnotify has
@@ -116,6 +96,8 @@ func ProcessArgs(args []string, isInternal bool) int {
 		return checkUsable()
 	case "--skill":
 		skillText()
+	case "--skill-export":
+		skillExport()
 	case "--config":
 		showConfig()
 	case "--defaults":

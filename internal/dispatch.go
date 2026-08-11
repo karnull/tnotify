@@ -73,7 +73,7 @@ func cursorMark(set, shipped string) string {
 // to the shipped markers rather than one mark for both, so picking one option
 // still looks different from ticking several.
 func notifyCursor(cfg Config) pkg.NotifyCursor {
-	shipped := defaultConfig()
+	shipped := shippedConfig()
 
 	return pkg.NotifyCursor{
 		Single:   cursorMark(cfg.Cursor.Single, shipped.Cursor.Single),

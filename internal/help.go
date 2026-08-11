@@ -58,7 +58,7 @@ const (
 func helpContent() (usage []string, sections []helpSection) {
 	// Written as one line each; how they break up is the terminal's business.
 	usage = []string{
-		"tnotify [-h | -v | --check | --skill | --config | --defaults]",
+		"tnotify [-h | -v | --check | --skill | --skill-export | --config | --defaults]",
 		"tnotify notify <body> [--head <heading>] [--author <name>] [--wait] [--timeout <seconds>] [--interactive [<option>...] [--custom] [--multiple]]",
 		"tnotify show [--all | --last]",
 		"tnotify clear [--all | --head <n> | --tail <n> | <number>...] [--author <name>]",
@@ -69,7 +69,8 @@ func helpContent() (usage []string, sections []helpSection) {
 			{term: "-h, --help", desc: "Print this help and exit"},
 			{term: "-v, --version", desc: "Print version information and exit"},
 			{term: "--check", desc: "Print nothing; exit 0 when a client is attached to this session to see a popup"},
-			{term: "--skill", desc: "Print the agent skill that teaches an agent to use tnotify"},
+			{term: "--skill", desc: "Say where the agent skill goes and how to let an agent run tnotify unprompted"},
+			{term: "--skill-export", desc: "Print the agent skill that teaches an agent to use tnotify"},
 			{term: "--config", desc: "Print the config path, creating it from the defaults when there is none"},
 			{term: "--defaults", desc: "Back up the current config and write the defaults"},
 		}},
@@ -247,7 +248,7 @@ func renderHelpAt(renderer *lipgloss.Renderer, width int) string {
 	usage, sections := helpContent()
 	descCol := helpDescColumn(sections)
 
-	name := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor)).Bold(true)
+	name := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
 	version := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
 	heading := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
 	termStyle := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
