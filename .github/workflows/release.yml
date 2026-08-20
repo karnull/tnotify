@@ -1,0 +1,166 @@
+# .github/workflows/release.yml
+
+# Cuts a release whenever main moves. The version comes from
+# resources/version.txt, the same file the binary embeds, so a merge only
+# releases when that file names a version that has not been tagged yet.
+
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One release at a time, and never cancel one midway: a cancelled run can
+# leave a pushed tag with no release hanging off it.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          # Tags decide whether this version has already gone out, and the
+          # release notes are generated from the history behind them.
+          fetch-depth: 0
+
+      - name: Read the version
+        id: version
+        run: |
+          set -euo pipefail
+
+          version="$(tr -d '[:space:]' < resources/version.txt)"
+
+          if [ -z "$version" ]; then
+            echo "::error file=resources/version.txt::version.txt is empty"
+            exit 1
+          fi
+
+          if ! printf '%s' "$version" |
+            grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'; then
+            echo "::error file=resources/version.txt::'$version' is not a semantic version"
+            exit 1
+          fi
+
+          # A dash marks a pre-release: 0.2.0-rc.1 ships, but not as latest.
+          prerelease=false
+          case "$version" in
+            *-*) prerelease=true ;;
+          esac
+
+          {
+            echo "version=$version"
+            echo "tag=v$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Look for an existing release
+        id: released
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG is already tagged, so there is nothing to release."
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$TAG has not been released yet."
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Go
+        if: steps.released.outputs.fresh == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Vet and test
+        if: steps.released.outputs.fresh == 'true'
+        run: |
+          set -euo pipefail
+          go vet ./...
+          go test ./...
+
+      - name: Build the binaries
+        if: steps.released.outputs.fresh == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          # tnotify drives tmux, so it ships where tmux runs.
+          for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            stage="dist/tnotify_${VERSION}_${os}_${arch}"
+
+            mkdir -p "$stage"
+
+            env CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+              go build -trimpath -ldflags '-s -w' \
+              -o "$stage/tnotify" ./cmd/tnotify
+
+            cp README.md LICENSE "$stage/"
+
+            tar -czf "$stage.tar.gz" -C dist "$(basename "$stage")"
+            rm -rf "$stage"
+          done
+
+          (cd dist && sha256sum -- *.tar.gz > "tnotify_${VERSION}_checksums.txt")
+
+          ls -l dist
+
+      - name: Tag the release
+        if: steps.released.outputs.fresh == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "tnotify $TAG"
+          git push origin "$TAG"
+
+      - name: Publish the release
+        if: steps.released.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          flags=(--title "tnotify $TAG" --generate-notes)
+
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+
+          gh release create "$TAG" "${flags[@]}" dist/*
+
+      - name: Say what happened
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          FRESH: ${{ steps.released.outputs.fresh }}
+        run: |
+          set -euo pipefail
+
+          if [ "$FRESH" = "true" ]; then
+            echo "Released $TAG." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Skipped: $TAG is already released. Bump resources/version.txt to cut a new one." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
