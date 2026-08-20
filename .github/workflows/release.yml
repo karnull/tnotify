@@ -151,6 +151,33 @@ jobs:
 
           gh release create "$TAG" "${flags[@]}" dist/*
 
+      # This repository doubles as its own Homebrew tap, so the formula is
+      # written back to main once the archives it names are actually published.
+      - name: Point the Homebrew formula at the release
+        if: steps.released.outputs.fresh == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p Formula
+          .github/scripts/formula.sh \
+            "$VERSION" "dist/tnotify_${VERSION}_checksums.txt" > Formula/tnotify.rb
+
+          if git diff --quiet -- Formula/tnotify.rb; then
+            echo "The formula already names $TAG."
+            exit 0
+          fi
+
+          git add Formula/tnotify.rb
+          git commit -m "chore: point the homebrew formula at $TAG"
+
+          # A push made with GITHUB_TOKEN starts no further workflow run, so
+          # this cannot come back round as a second release.
+          git pull --rebase origin main
+          git push origin HEAD:main
+
       - name: Say what happened
         env:
           TAG: ${{ steps.version.outputs.tag }}
@@ -159,7 +186,8 @@ jobs:
           set -euo pipefail
 
           if [ "$FRESH" = "true" ]; then
-            echo "Released $TAG." >> "$GITHUB_STEP_SUMMARY"
+            echo "Released $TAG, and pointed the Homebrew formula at it." \
+              >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Skipped: $TAG is already released. Bump resources/version.txt to cut a new one." \
               >> "$GITHUB_STEP_SUMMARY"

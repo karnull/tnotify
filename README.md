@@ -18,6 +18,21 @@ message as a popup instead, waits for an answer, and prints it to stdout.
 - Publishes the number of waiting notifications to tmux, for a status line.
 - Colours, popup position, side panel and cursor markers all come from a TOML config.
 
+## Installing
+
+This repository is its own Homebrew tap, so the tap is named for it rather
+than for a separate `homebrew-` repository:
+
+    brew tap karnull/tnotify https://github.com/karnull/tnotify
+    brew install tnotify
+
+The formula carries a prebuilt binary for macOS and Linux on both Intel and
+Apple silicon, so nothing is compiled and Go is not needed to install it.
+
+To build from source instead:
+
+    go build ./cmd/tnotify
+
 ## Using it
 
 Send a notification and carry on:
