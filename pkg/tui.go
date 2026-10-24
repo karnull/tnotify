@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 //- Types ------------------------------------------------------------------------------------------
@@ -326,7 +326,7 @@ func (m notifyModel) optionRows(textWidth int) []string {
 		if i < len(m.notification.Options) {
 			label = m.notification.Options[i]
 		} else {
-			m.input.Width = max(textWidth-lipgloss.Width(prefix)-1, 1)
+			m.input.SetWidth(max(textWidth-lipgloss.Width(prefix)-1, 1))
 			label = m.input.View()
 		}
 
@@ -422,7 +422,7 @@ func (m notifyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "esc", "ctrl+c":
 			m.result = NotifyResult{Action: ActionIgnore}
@@ -462,7 +462,7 @@ func (m notifyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.moveCursor(-1)
 		case "j":
 			m.moveCursor(1)
-		case " ":
+		case "space":
 			if m.notification.Multiple && m.cursor < len(m.checked) {
 				m.checked[m.cursor] = !m.checked[m.cursor]
 			}
@@ -476,7 +476,7 @@ func (m notifyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // Draw the notification into the popup, keeping the footer against the bottom.
-func (m notifyModel) View() string {
+func (m notifyModel) content() string {
 	// Nothing sensible to draw until tmux has told us how big the popup is.
 	if m.width < 1 || m.height < 1 {
 		return ""
@@ -513,6 +513,13 @@ func (m notifyModel) View() string {
 		Render(content)
 }
 
+// Show the notification full-screen, which inside tmux is the popup itself.
+func (m notifyModel) View() tea.View {
+	view := tea.NewView(m.content())
+	view.AltScreen = true
+	return view
+}
+
 //- Public Calls -----------------------------------------------------------------------------------
 
 // The fewest rows this notification can be drawn into: the padding, a single
@@ -543,7 +550,7 @@ func (n Notification) Height(innerWidth int) int {
 // relaunched inside tmux, is the popup sized from the config — and block until
 // the user dismisses it or picks an option.
 func RunNotifyTUI(n Notification) (NotifyResult, error) {
-	prog := tea.NewProgram(newNotifyModel(n), tea.WithAltScreen())
+	prog := tea.NewProgram(newNotifyModel(n))
 
 	final, err := prog.Run()
 	if err != nil {

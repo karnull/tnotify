@@ -6,8 +6,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
+
+//- Private Helpers --------------------------------------------------------------------------------
+
+// The option rows as they read on screen, without the styling drawn over them.
+func plainOptionRows(m notifyModel, width int) []string {
+	rows := m.optionRows(width)
+	for i, row := range rows {
+		rows[i] = ansi.Strip(row)
+	}
+	return rows
+}
 
 //- Tests ------------------------------------------------------------------------------------------
 
@@ -57,7 +69,7 @@ func TestOptionRowsMarkTheCursor(t *testing.T) {
 				Cursor:   NotifyCursor{Single: ">", Multiple: "+"},
 			})
 
-			rows := m.optionRows(40)
+			rows := plainOptionRows(m, 40)
 
 			if !strings.HasPrefix(rows[0], test.want) {
 				t.Errorf("row under the cursor = %q, want it marked with %q", rows[0], test.want)
@@ -93,7 +105,7 @@ func TestOptionRowsLineUpUnderAnyMarker(t *testing.T) {
 func TestOptionRowsWithoutAMarker(t *testing.T) {
 	m := newNotifyModel(Notification{Options: []string{"yes", "no"}})
 
-	if rows := m.optionRows(40); !strings.HasPrefix(rows[0], "1.") {
+	if rows := plainOptionRows(m, 40); !strings.HasPrefix(rows[0], "1.") {
 		t.Errorf("row under the cursor = %q, want it to start with its number", rows[0])
 	}
 }

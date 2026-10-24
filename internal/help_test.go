@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import (
 // a writer that is no terminal at all, so nothing is coloured and the text can
 // be measured as it stands.
 func helpAt(width int) string {
-	return renderHelpAt(lipgloss.NewRenderer(io.Discard), width)
+	return renderHelpAt(io.Discard, width)
 }
 
 //- Tests ------------------------------------------------------------------------------------------

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
@@ -102,26 +102,26 @@ func newClockPanel(t *testing.T, sent time.Time, width int) string {
 	}
 
 	clock := PanelClock{Time: "15:04", Date: "02/01/2006"}
-	return press(t, newPanel(f, clock, width, 20)).View()
+	return press(t, newPanel(f, clock, width, 20)).View().Content
 }
 
 // Turn a key's name into the message bubbletea would deliver for it.
-func keyMsg(key string) tea.KeyMsg {
+func keyMsg(key string) tea.KeyPressMsg {
 	switch key {
 	case "up":
-		return tea.KeyMsg{Type: tea.KeyUp}
+		return tea.KeyPressMsg{Code: tea.KeyUp}
 	case "down":
-		return tea.KeyMsg{Type: tea.KeyDown}
+		return tea.KeyPressMsg{Code: tea.KeyDown}
 	case "enter":
-		return tea.KeyMsg{Type: tea.KeyEnter}
+		return tea.KeyPressMsg{Code: tea.KeyEnter}
 	case "esc":
-		return tea.KeyMsg{Type: tea.KeyEsc}
+		return tea.KeyPressMsg{Code: tea.KeyEsc}
 	case "delete":
-		return tea.KeyMsg{Type: tea.KeyDelete}
+		return tea.KeyPressMsg{Code: tea.KeyDelete}
 	case "backspace":
-		return tea.KeyMsg{Type: tea.KeyBackspace}
+		return tea.KeyPressMsg{Code: tea.KeyBackspace}
 	default:
-		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+		return tea.KeyPressMsg{Code: []rune(key)[0], Text: key}
 	}
 }
 
@@ -270,7 +270,7 @@ func TestAFailedAnswerKeepsTheNotification(t *testing.T) {
 	if m.failures[2] == "" {
 		t.Error("panel recorded no failure against the notification")
 	}
-	if !strings.Contains(panel.View(), "has closed") {
+	if !strings.Contains(panel.View().Content, "has closed") {
 		t.Error("panel does not say why the answer did not arrive")
 	}
 
@@ -444,17 +444,17 @@ func TestScrollingKeepsTheFocusedNotificationOnScreen(t *testing.T) {
 	// Room for roughly one notification at a time.
 	panel := newTestPanel(t, f, 40, 10)
 
-	if view := panel.View(); !strings.Contains(view, "deploy.sh") {
+	if view := panel.View().Content; !strings.Contains(view, "deploy.sh") {
 		t.Errorf("panel does not show the focused notification:\n%s", view)
 	}
 
 	bottom := press(t, panel, "k")
-	if view := bottom.View(); !strings.Contains(view, "which volumes?") {
+	if view := bottom.View().Content; !strings.Contains(view, "which volumes?") {
 		t.Errorf("panel did not scroll to the focused notification:\n%s", view)
 	}
 
 	back := press(t, bottom, "j")
-	if view := back.View(); !strings.Contains(view, "staging is up") {
+	if view := back.View().Content; !strings.Contains(view, "staging is up") {
 		t.Errorf("panel did not scroll back to the focused notification:\n%s", view)
 	}
 }
@@ -468,7 +468,7 @@ func TestPanelFillsThePaneItIsDrawnIn(t *testing.T) {
 		panel := newTestPanel(t, f, 40, height)
 
 		for _, keys := range [][]string{{}, {"k"}, {"j", "enter"}} {
-			view := press(t, panel, keys...).View()
+			view := press(t, panel, keys...).View().Content
 
 			if got := strings.Count(view, "\n") + 1; got != height {
 				t.Errorf("panel of height %d after %v drew %d rows", height, keys, got)
@@ -484,7 +484,7 @@ func TestEveryRowIsExactlyThePaneWidth(t *testing.T) {
 	f := newFakeSource()
 
 	for _, width := range []int{20, 34, 41, 80} {
-		view := newTestPanel(t, f, width, 40).View()
+		view := newTestPanel(t, f, width, 40).View().Content
 
 		for i, line := range strings.Split(view, "\n") {
 			if got := lipgloss.Width(line); got != width {
@@ -498,7 +498,7 @@ func TestEveryRowIsExactlyThePaneWidth(t *testing.T) {
 // clear it from the command line, so they count the whole list from 1.
 func TestBoxesAreNumberedFromOne(t *testing.T) {
 	f := newFakeSource()
-	view := newTestPanel(t, f, 40, 40).View()
+	view := newTestPanel(t, f, 40, 40).View().Content
 
 	for number := 1; number <= 3; number++ {
 		if label := fmt.Sprintf("─ %d ─", number); !strings.Contains(view, label) {
@@ -594,7 +594,7 @@ func TestJumpingToANotificationByNumber(t *testing.T) {
 	}
 
 	// The number is shown as it is typed, so it is not being entered blind.
-	if view := press(t, panel, ":", "2").View(); !strings.Contains(view, ":2") {
+	if view := press(t, panel, ":", "2").View().Content; !strings.Contains(view, ":2") {
 		t.Errorf("panel does not show the number being typed:\n%s", view)
 	}
 }
@@ -638,7 +638,7 @@ func TestExpiredNotificationIsPlainAndLabelled(t *testing.T) {
 	f.items[1].Notification.Expired = true
 
 	panel := newTestPanel(t, f, 40, 40)
-	view := panel.View()
+	view := panel.View().Content
 
 	if !strings.Contains(view, "─ 2 ─ timeout ─") {
 		t.Errorf("panel does not mark the expired notification:\n%s", view)

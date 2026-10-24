@@ -4,9 +4,11 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/karnull/tnotify/pkg"
 	"github.com/karnull/tnotify/resources"
 )
@@ -28,6 +30,15 @@ const (
 )
 
 //- Private Helpers --------------------------------------------------------------------------------
+
+// Bring styled text down to the colour the destination can show: none at all
+// when it is not a terminal or NO_COLOR is set.
+func forDestination(out io.Writer, styled string) string {
+	var fitted strings.Builder
+	writer := &colorprofile.Writer{Forward: &fitted, Profile: colorprofile.Detect(out, os.Environ())}
+	_, _ = io.WriteString(writer, styled)
+	return fitted.String()
+}
 
 // Report a failure to the user in the CLI's standard form.
 func reportError(err error) {

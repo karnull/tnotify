@@ -3,10 +3,11 @@
 package internal
 
 import (
+	"io"
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/term"
 	"github.com/karnull/tnotify/resources"
 )
@@ -236,28 +237,27 @@ func helpRow(entry helpEntry, descCol, width int, termStyle, descStyle lipgloss.
 
 // Render the whole help, wrapped to the terminal it is going to.
 func renderHelp(file *os.File) string {
-	// The renderer is bound to the file the help is written to, so colour is
-	// dropped when that is redirected even though the other stream is still a
-	// terminal — and dropped altogether when NO_COLOR is set.
-	return renderHelpAt(lipgloss.NewRenderer(file), helpWidth(file))
+	// Colour is fitted to the file the help is written to, so it is dropped when
+	// that is redirected even though the other stream is still a terminal — and
+	// dropped altogether when NO_COLOR is set.
+	return renderHelpAt(file, helpWidth(file))
 }
 
-// Render the help into the given width, with the given renderer deciding how
-// much colour the destination can take.
-func renderHelpAt(renderer *lipgloss.Renderer, width int) string {
+// Render the help into the given width, with as much colour as out can take.
+func renderHelpAt(out io.Writer, width int) string {
 	usage, sections := helpContent()
 	descCol := helpDescColumn(sections)
 
-	name := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
-	version := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
-	heading := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
-	termStyle := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
+	name := lipgloss.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
+	version := lipgloss.NewStyle().Foreground(lipgloss.Color(cliTermColor))
+	heading := lipgloss.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
+	termStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(cliTermColor))
 
 	// Prose is left in whatever the terminal writes in, which is the one colour
 	// certain to be readable against its background.
-	descStyle := renderer.NewStyle()
+	descStyle := lipgloss.NewStyle()
 
-	out := []string{
+	lines := []string{
 		name.Render("tnotify") + " " + version.Render(strings.TrimSpace(resources.Version)) +
 			descStyle.Render("  —  tmux notification manager"),
 		"",
@@ -265,15 +265,15 @@ func renderHelpAt(renderer *lipgloss.Renderer, width int) string {
 	}
 
 	for _, line := range usage {
-		out = append(out, helpUsageRow(line, width, termStyle, descStyle)...)
+		lines = append(lines, helpUsageRow(line, width, termStyle, descStyle)...)
 	}
 
 	for _, section := range sections {
-		out = append(out, "", heading.Render(section.title))
+		lines = append(lines, "", heading.Render(section.title))
 
 		if section.prose != "" {
 			for _, line := range wrapText(section.prose, width-helpIndent) {
-				out = append(out, strings.Repeat(" ", helpIndent)+descStyle.Render(line))
+				lines = append(lines, strings.Repeat(" ", helpIndent)+descStyle.Render(line))
 			}
 			continue
 		}
@@ -282,11 +282,11 @@ func renderHelpAt(renderer *lipgloss.Renderer, width int) string {
 			// Commands are groups in their own right, so they get air above
 			// them; the flags beneath one stay tight against it.
 			if section.spaced && !entry.under && i > 0 {
-				out = append(out, "")
+				lines = append(lines, "")
 			}
-			out = append(out, helpRow(entry, descCol, width, termStyle, descStyle)...)
+			lines = append(lines, helpRow(entry, descCol, width, termStyle, descStyle)...)
 		}
 	}
 
-	return strings.Join(out, "\n") + "\n"
+	return forDestination(out, strings.Join(lines, "\n")+"\n")
 }
