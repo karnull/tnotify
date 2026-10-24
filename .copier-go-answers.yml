@@ -1,0 +1,16 @@
+
+# .copier-go-answers.yml.jinja
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v2.1.1
+_src_path: gh:karshosphere/template-go
+app_type: TUI
+include_database: false
+project_description: Notifications and questions in a tmux popup, for panes nobody
+    is watching
+project_name_raw: tnotify
+project_slug: tnotify
+release_targets:
+- linux-arm64
+- linux-x64
+- macOS-intel
+- macOS-apple-silicon

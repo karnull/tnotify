@@ -1,0 +1,167 @@
+// internal/parse.go
+
+package internal
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+const notifyUsage = `Usage: tnotify notify <body> [--head <heading>] [--author <name>] [--wait] [--timeout <seconds>] [--interactive [<option>...] [--custom] [--multiple]]`
+
+// notifyRequest is a parsed "tnotify notify ..." invocation.
+type notifyRequest struct {
+	Body   string
+	Head   string
+	Author string
+
+	Options []string
+
+	// Whether --interactive was given at all, which the options alone do not
+	// say: a bare --interactive alongside --custom carries none.
+	Interactive bool
+
+	Custom   bool
+	Multiple bool
+
+	// Whether the caller stays on the line when the user sets the notification
+	// aside, rather than giving up on an answer the moment the popup closes.
+	Wait bool
+
+	// How many seconds it is prepared to wait for, zero meaning for as long as
+	// it takes. Only meaningful alongside Wait, which it implies.
+	Timeout int
+}
+
+//- Private Helpers --------------------------------------------------------------------------------
+
+// Whether an argument is a flag rather than a value or an operand.
+func isFlag(arg string) bool {
+	return strings.HasPrefix(arg, "--")
+}
+
+// Read the value following the flag at args[i], along with the index to carry
+// on from. A flag left without a value is simply skipped.
+func flagValue(args []string, i int) (value string, next int) {
+	if i+1 < len(args) && !isFlag(args[i+1]) {
+		return args[i+1], i + 2
+	}
+	return "", i + 1
+}
+
+// Collect the run of values following the flag at args[i], along with the index
+// to carry on from. The run ends at the next flag or the end of the arguments.
+func flagValues(args []string, i int) (values []string, next int) {
+	for i++; i < len(args) && !isFlag(args[i]); i++ {
+		values = append(values, args[i])
+	}
+	return values, i
+}
+
+// Read the seconds following --timeout. Zero is the default and means no limit
+// at all, so only a negative count is nonsense.
+func timeoutValue(args []string, i int) (seconds, next int, err error) {
+	value, next := flagValue(args, i)
+	if value == "" {
+		return 0, next, fmt.Errorf("--timeout needs a number of seconds, or 0 for no limit\n%s", notifyUsage)
+	}
+
+	seconds, err = strconv.Atoi(value)
+	if err != nil || seconds < 0 {
+		return 0, next, fmt.Errorf("--timeout needs a number of seconds, not %q\n%s", value, notifyUsage)
+	}
+
+	return seconds, next, nil
+}
+
+// Check that the option-list flags were given a list to work on.
+func validateInteractive(req notifyRequest) error {
+	// --custom and --multiple only mean anything alongside a list of options.
+	if (req.Custom || req.Multiple) && !req.Interactive {
+		flag := "--custom"
+		if req.Multiple {
+			flag = "--multiple"
+		}
+		return fmt.Errorf("%s requires --interactive\n%s", flag, notifyUsage)
+	}
+
+	// A bare --custom needs no options, but a plain --interactive with none has
+	// nothing to show.
+	if req.Interactive && len(req.Options) == 0 && !req.Custom {
+		return fmt.Errorf("--interactive needs at least one option, or --custom to type one\n%s", notifyUsage)
+	}
+
+	return nil
+}
+
+// Read a "tnotify notify ..." command line into the notification it describes.
+func parseNotify(args []string) (notifyRequest, error) {
+	if len(args) == 0 {
+		return notifyRequest{}, fmt.Errorf("missing notification body\n%s", notifyUsage)
+	}
+
+	var req notifyRequest
+	var err error
+
+	for i := 0; i < len(args); {
+		switch arg := args[i]; arg {
+		case "--head":
+			req.Head, i = flagValue(args, i)
+
+		case "--author":
+			req.Author, i = flagValue(args, i)
+
+		case "--interactive":
+			req.Interactive = true
+			req.Options, i = flagValues(args, i)
+
+		case "--custom":
+			req.Custom, i = true, i+1
+
+		case "--multiple":
+			req.Multiple, i = true, i+1
+
+		case "--wait":
+			req.Wait, i = true, i+1
+
+		case "--timeout":
+			// Naming a limit is only ever asking to wait up to it.
+			req.Wait = true
+			if req.Timeout, i, err = timeoutValue(args, i); err != nil {
+				return notifyRequest{}, err
+			}
+
+		case "--interactive-custom":
+			// Replaced by "--interactive ... --custom"; say so rather than
+			// silently downgrade to a notification with no options.
+			return notifyRequest{}, fmt.Errorf("--interactive-custom has been replaced by --interactive with --custom\n%s", notifyUsage)
+
+		default:
+			if isFlag(arg) {
+				return notifyRequest{}, fmt.Errorf("unknown flag %s\n%s", arg, notifyUsage)
+			}
+			// The first operand is the message; later ones are ignored.
+			if req.Body == "" {
+				req.Body = arg
+			}
+			i++
+		}
+	}
+
+	if err := validateInteractive(req); err != nil {
+		return notifyRequest{}, err
+	}
+
+	return req, nil
+}
+
+// Describe what a "tnotify show ..." command line would display.
+func parseShow(args []string) string {
+	mode, err := showMode(args)
+	if err != nil {
+		return fmt.Sprintf("[SHOW] error: %v", err)
+	}
+
+	return fmt.Sprintf("[SHOW] Displaying notifications (%s).", mode)
+}

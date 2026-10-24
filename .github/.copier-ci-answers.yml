@@ -1,0 +1,4 @@
+# .github/.copier-ci-answers.yml.jinja
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v2.0.0
+_src_path: gh:karshosphere/template-github-ci

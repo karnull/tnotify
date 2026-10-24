@@ -1,0 +1,63 @@
+# .github/workflows/formula.yml
+
+# Points the Homebrew formula at each release the ci workflow publishes. This
+# repository doubles as its own tap, so the formula is written back to main.
+
+name: formula
+
+# workflow_run rather than release, since a release created with GITHUB_TOKEN starts no further run
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: formula
+  cancel-in-progress: false
+
+jobs:
+  formula:
+    # ci only publishes a release from a push to main that passed
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - id: version
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "tag=$(git show "$HEAD_SHA:VERSION" | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+      - name: Download the release binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh release download "$TAG" --pattern 'tnotify-*' --dir dist
+      - name: Point the formula at the release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p Formula
+          .github/scripts/formula.sh "$TAG" dist > Formula/tnotify.rb
+
+          if git diff --quiet -- Formula/tnotify.rb; then
+            echo "The formula already names $TAG."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/tnotify.rb
+          git commit -m "chore: point the homebrew formula at $TAG"
+
+          # a push made with GITHUB_TOKEN starts no further workflow run, so this cannot come back round as a release
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "Pointed the Homebrew formula at $TAG." >> "$GITHUB_STEP_SUMMARY"

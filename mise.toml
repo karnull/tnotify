@@ -1,8 +1,0 @@
-[tools]
-go = "latest"
-"go:golang.org/x/tools/gopls" = "latest"
-
-[shell_alias]
-run   = 'go run cmd/tnotify/tnotify.go'
-debug = ''
-
