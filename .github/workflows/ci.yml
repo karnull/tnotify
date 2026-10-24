@@ -1,0 +1,146 @@
+name: ci
+
+# pull_request rather than pull_request_target, so a fork's code never runs with this repository's secrets
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # pull requests share a group per branch so newer pushes replace older runs; each commit on main
+  # gets its own group, since a pending run in a shared group is dropped and its tag would be skipped
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # renovate: datasource=node-version depName=node
+  NODE_VERSION: 24.22.0
+  # renovate: datasource=npm depName=@devcontainers/cli
+  DEVCONTAINER_CLI_VERSION: 0.89.0
+
+jobs:
+  version:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # full history, so every existing release tag is available to compare against
+          fetch-depth: 0
+      - name: VERSION holds a single vX.Y.Z version
+        run: |
+          if ! grep -Eqx 'v[0-9]+\.[0-9]+\.[0-9]+' VERSION || [ "$(grep -c "" VERSION)" -ne 1 ]; then
+            echo "::error file=VERSION::VERSION must be one line of the form vX.Y.Z"
+            exit 1
+          fi
+      - name: VERSION is higher than every release tag
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          latest=$(git tag --list --sort=-v:refname | { grep -Ex 'v[0-9]+\.[0-9]+\.[0-9]+' || true; } | sed -n 1p)
+          if [ -n "$latest" ]; then
+            highest=$(printf '%s\n' "$latest" "$version" | sort -V | tail -n 1)
+            if [ "$version" = "$latest" ] || [ "$highest" != "$version" ]; then
+              echo "::error file=VERSION::VERSION is $version but $latest is already released; bump it above $latest"
+              exit 1
+            fi
+          fi
+
+  checks:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Makefile is present
+        run: |
+          [ -f Makefile ] || {
+            echo "::error::Makefile is missing from the project root"
+            exit 1
+          }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "@devcontainers/cli@$DEVCONTAINER_CLI_VERSION"
+      - name: Start the dev container
+        run: devcontainer up --workspace-folder .
+      - name: Format
+        run: devcontainer exec --workspace-folder . make format-dry-run
+      - name: Build
+        run: devcontainer exec --workspace-folder . make build
+      - name: Test
+        run: devcontainer exec --workspace-folder . make test
+      - name: Release build
+        run: devcontainer exec --workspace-folder . make release
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          # a project releasing no targets leaves dist/ empty
+          if-no-files-found: ignore
+
+  release:
+    if: github.event_name == 'push'
+    needs: [version, checks]
+    runs-on: ubuntu-26.04
+    permissions:
+      # publishes the release, which also creates its tag
+      contents: write
+      # reads the merged pull request's description for the release notes
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: version
+        run: echo "tag=$(tr -d "[:space:]" < VERSION)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          # a pattern rather than a name, so a missing artifact means no files instead of a failure
+          pattern: dist
+          merge-multiple: true
+          path: dist
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const tag = process.env.TAG;
+
+            const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              ...context.repo,
+              commit_sha: context.sha,
+            });
+            const merged = pulls.find(pull => pull.merge_commit_sha === context.sha) ?? pulls.find(pull => pull.merged_at);
+            const notes = merged?.body || context.payload.head_commit?.message || '';
+
+            const files = fs.existsSync('dist')
+              ? fs.readdirSync('dist', { withFileTypes: true }).filter(entry => entry.isFile()).map(entry => entry.name)
+              : [];
+
+            // a draft holds the tag back until every file is attached, so a failed upload leaves no half-made release
+            const { data: release } = await github.rest.repos.createRelease({
+              ...context.repo,
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: tag,
+              body: notes,
+              draft: true,
+            });
+            for (const name of files) {
+              const data = fs.readFileSync(path.join('dist', name));
+              await github.rest.repos.uploadReleaseAsset({
+                ...context.repo,
+                release_id: release.id,
+                name,
+                data,
+                headers: { 'content-type': 'application/octet-stream', 'content-length': data.length },
+              });
+            }
+            await github.rest.repos.updateRelease({ ...context.repo, release_id: release.id, draft: false });
+            core.notice(`Released ${tag} with ${files.length} file(s)`);
