@@ -31,7 +31,7 @@ RUN groupadd --gid 1000 user \
 USER user
 WORKDIR /home/user
 
-COPY --from=golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e /usr/local/go /usr/local/go
+COPY --from=golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4 /usr/local/go /usr/local/go
 ENV PATH=$PATH:/usr/local/go/bin
 RUN go version
 
