@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/karnull/tnotify/resources"
 )
 
@@ -79,10 +79,9 @@ func skillNote(out io.Writer) string {
 	// Coloured the way the help is: the agent's name reads as a heading, what
 	// has to be typed or opened stands out under it, and the labels are left in
 	// the terminal's own colour.
-	renderer := lipgloss.NewRenderer(out)
-	name := renderer.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
-	value := renderer.NewStyle().Foreground(lipgloss.Color(cliTermColor))
-	plain := renderer.NewStyle()
+	name := lipgloss.NewStyle().Foreground(lipgloss.Color(cliAccentColor))
+	value := lipgloss.NewStyle().Foreground(lipgloss.Color(cliTermColor))
+	plain := lipgloss.NewStyle()
 
 	// Where the paths start, and so where an entry with no label of its own is
 	// carried across to sit under them.
@@ -108,7 +107,7 @@ func skillNote(out io.Writer) string {
 		}
 	}
 
-	return strings.Join(note, "\n") + "\n"
+	return forDestination(out, strings.Join(note, "\n")+"\n")
 }
 
 // Implements --skill: say where the skill goes and how to let an agent run

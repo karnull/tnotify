@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 //- Types ------------------------------------------------------------------------------------------
@@ -301,7 +301,7 @@ func (m *panelModel) jumpTo() {
 // Handle a keypress while the user is typing the number of a notification to go
 // to. Only digits get that far, so a mistyped key does not quietly land the
 // cursor somewhere unintended.
-func (m panelModel) updateJumping(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m panelModel) updateJumping(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch key := msg.String(); key {
 	case "ctrl+c":
 		return m, tea.Quit
@@ -332,7 +332,7 @@ func (m panelModel) updateJumping(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // Handle a keypress while the user is moving between notifications.
-func (m panelModel) updateFocused(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m panelModel) updateFocused(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.jumping {
 		return m.updateJumping(msg)
 	}
@@ -363,7 +363,7 @@ func (m panelModel) updateFocused(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // Handle a keypress while the user is working through one notification's
 // options.
-func (m panelModel) updateEntered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m panelModel) updateEntered(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	item, box, ok := m.focused()
 	if !ok {
 		m.entered = false
@@ -406,7 +406,7 @@ func (m panelModel) updateEntered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		box.moveCursor(-1)
 	case "j":
 		box.moveCursor(1)
-	case " ":
+	case "space":
 		if item.Notification.Multiple && box.cursor < len(box.checked) {
 			box.checked[box.cursor] = !box.checked[box.cursor]
 		}
@@ -684,7 +684,7 @@ func (m panelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.reload(msg.items)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.entered {
 			return m.updateEntered(msg)
 		}
@@ -696,7 +696,7 @@ func (m panelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // Draw the notifications down the pane, keeping the key hints against the
 // bottom.
-func (m panelModel) View() string {
+func (m panelModel) content() string {
 	// Nothing sensible to draw until tmux has told us how big the pane is.
 	if m.width < minPanelWidth || m.height < 1 {
 		return ""
@@ -755,6 +755,13 @@ func (m panelModel) View() string {
 	return lipgloss.NewStyle().Width(m.width).Height(m.height).Render(content)
 }
 
+// Show the panel full-screen, which is the pane tnotify split off for it.
+func (m panelModel) View() tea.View {
+	view := tea.NewView(m.content())
+	view.AltScreen = true
+	return view
+}
+
 //- Public Calls -----------------------------------------------------------------------------------
 
 // Draw every waiting notification as a box in the current terminal — which,
@@ -774,7 +781,7 @@ func RunPanelTUI(colors NotifyColors, clock PanelClock, source PanelSource) erro
 		failures: map[int]string{},
 	}
 
-	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
+	if _, err := tea.NewProgram(model).Run(); err != nil {
 		return fmt.Errorf("running notification panel: %w", err)
 	}
 
