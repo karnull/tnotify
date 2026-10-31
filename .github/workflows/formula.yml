@@ -48,14 +48,15 @@ jobs:
           mkdir -p Formula
           .github/scripts/formula.sh "$TAG" dist > Formula/tnotify.rb
 
-          if git diff --quiet -- Formula/tnotify.rb; then
+          # staged first, so the formula's first release counts as a change rather than an untracked file
+          git add Formula/tnotify.rb
+          if git diff --cached --quiet -- Formula/tnotify.rb; then
             echo "The formula already names $TAG."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/tnotify.rb
           git commit -m "chore: point the homebrew formula at $TAG"
 
           # a push made with GITHUB_TOKEN starts no further workflow run, so this cannot come back round as a release
