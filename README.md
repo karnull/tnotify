@@ -114,8 +114,14 @@ $ make format-dry-run   # list files that need formatting
 
 The targets are set in the `Makefile`, in `RELEASE_TARGETS`, and built by `scripts/release.sh`.
 
-Merging into `main` with a new version in `VERSION` publishes a GitHub release
-carrying those binaries, and the Homebrew formula is then pointed at it.
+Every merge into `main` publishes a GitHub release carrying those binaries, and
+the Homebrew formula is then pointed at it. The version comes from the commit
+messages since the last release: a breaking change marked with `!`, as in
+`feat!:`, bumps the major version, a `feat:` the minor, and anything else the
+patch. The release notes are the descriptions of the pull requests it carries.
+
+`make build VERSION=1.2.3` stamps a version into a local build; without one,
+`tnotify --version` reports `dev`.
 
 ## Copier Update
 
