@@ -67,6 +67,11 @@ late answers, and reading the waiting count into a status line.
 popup rather than in its own pane, which is where its questions normally go
 unread.
 
+    tnotify config claude    # install the skill and let the agent run tnotify unprompted
+
+`config` takes `claude`, `codex`, `copilot` or `antigravity`, several at once if
+you like, and is safe to run again. To do it by hand instead:
+
     tnotify --skill          # where the skill file goes, and how to allow it
     tnotify --skill-export   # the skill itself, to write into a skills directory
 
