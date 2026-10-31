@@ -32,7 +32,8 @@ jobs:
       - id: version
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: echo "tag=$(git show "$HEAD_SHA:VERSION" | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+        # ci tags the commit it releases, so the tag on it names the release
+        run: echo "tag=$(git tag --points-at "$HEAD_SHA" | grep -Ex 'v[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1)" >> "$GITHUB_OUTPUT"
       - name: Download the release binaries
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,10 +1,7 @@
 // version.go
 
-// Package tnotify holds the release version from VERSION, kept here because
-// go:embed only reaches files at or below the embedding package.
+// Package tnotify holds the release version, which CI stamps in from the release tag.
 package tnotify
 
-import _ "embed"
-
-//go:embed VERSION
-var Version string
+// Set with -ldflags -X at build time; anything built outside a release reports dev.
+var Version = "dev"
