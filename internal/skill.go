@@ -15,13 +15,31 @@ import (
 // agentSetup is what one agent has to be told: where it keeps its skills, and
 // where its standing permission to run tnotify unprompted is written. entry is
 // what goes in that file, and is empty where allow is a command rather than a
-// file to edit.
+// file to edit. id is the name "tnotify config" knows it by, and rule is the
+// one permission entry that config writes, stored the way store says.
 type agentSetup struct {
+	id    string
 	name  string
 	skill string
 	allow string
 	entry string
+	rule  string
+	store allowStore
 }
+
+// How an agent keeps its standing permissions.
+type allowStore int
+
+const (
+	// A JSON settings file, with the rule in its permissions.allow list.
+	allowInJSON allowStore = iota
+
+	// A rules file, with the rule on a line of its own.
+	allowAsLine
+
+	// Nowhere tnotify can write, so the agent has to be launched with a flag.
+	allowByFlag
+)
 
 // The labels each agent's paths are written against. Both are laid out to the
 // longer of the two, so the paths line up under each other.
@@ -45,29 +63,40 @@ const (
 func agentSetups() []agentSetup {
 	return []agentSetup{
 		{
+			id:    "claude",
 			name:  "Claude Code",
 			skill: "~/.claude/skills/tnotify/SKILL.md",
 			allow: "~/.claude/settings.json",
 			entry: `"permissions": { "allow": ["Bash(tnotify:*)"] }`,
+			rule:  "Bash(tnotify:*)",
+			store: allowInJSON,
 		},
 		{
+			id:    "codex",
 			name:  "Codex",
 			skill: "~/.codex/skills/tnotify/SKILL.md",
 			allow: "~/.codex/rules/default.rules",
 			entry: `prefix_rule(pattern = ["tnotify"], decision = "allow")`,
+			rule:  `prefix_rule(pattern = ["tnotify"], decision = "allow")`,
+			store: allowAsLine,
 		},
 		{
-			// Copilot writes its own permissions file and has no documented
-			// syntax for editing by hand, so the flag is what there is to give.
+			// Copilot only saves approvals per repository, in a file it rewrites
+			// itself, so the flag is the one user-wide allowance there is.
+			id:    "copilot",
 			name:  "Copilot CLI",
 			skill: "~/.copilot/skills/tnotify/SKILL.md",
 			allow: `copilot --allow-tool 'shell(tnotify)'`,
+			store: allowByFlag,
 		},
 		{
+			id:    "antigravity",
 			name:  "Antigravity",
 			skill: "~/.gemini/config/skills/tnotify/SKILL.md",
 			allow: "~/.gemini/antigravity-cli/settings.json",
 			entry: `"permissions": { "allow": ["command(tnotify)"] }`,
+			rule:  "command(tnotify)",
+			store: allowInJSON,
 		},
 	}
 }
@@ -90,7 +119,10 @@ func skillNote(out io.Writer) string {
 	gap := strings.Repeat(" ", setupGap)
 
 	note := []string{
-		"Run " + value.Render("tnotify --skill-export > SKILL.md") + " in your agent's skills directory,",
+		"Run " + value.Render("tnotify config <agent>") + " to have this done for you, with <agent> one of",
+		strings.Join(agentIDs(), ", ") + ".",
+		"",
+		"By hand: run " + value.Render("tnotify --skill-export > SKILL.md") + " in your agent's skills directory,",
 		"then let the agent run tnotify without asking each time:",
 	}
 

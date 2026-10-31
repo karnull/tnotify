@@ -120,6 +120,8 @@ func ProcessArgs(args []string, isInternal bool) int {
 		return dispatchShow(args[1:], isInternal)
 	case "clear":
 		return dispatchClear(args[1:])
+	case "config":
+		return dispatchConfig(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command or flag: %s\n", cmd)
 		helpText()

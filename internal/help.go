@@ -63,6 +63,7 @@ func helpContent() (usage []string, sections []helpSection) {
 		"tnotify notify <body> [--head <heading>] [--author <name>] [--wait] [--timeout <seconds>] [--interactive [<option>...] [--custom] [--multiple]]",
 		"tnotify show [--all | --last]",
 		"tnotify clear [--all | --head <n> | --tail <n> | <number>...] [--author <name>]",
+		"tnotify config <agent>...",
 	}
 
 	sections = []helpSection{
@@ -95,6 +96,8 @@ func helpContent() (usage []string, sections []helpSection) {
 			{term: "--head <n>", under: true, desc: "Clear the <n> that have been waiting longest"},
 			{term: "--tail <n>", under: true, desc: "Clear the <n> that arrived most recently"},
 			{term: "--author <name>", under: true, desc: "Clear only what this author sent; cannot be given alongside numbers"},
+
+			{term: "config <agent>...", desc: "Install the skill for each agent and let it run tnotify unprompted: claude, codex, copilot or antigravity"},
 		}},
 
 		{title: "ENVIRONMENT", entries: []helpEntry{
