@@ -9,6 +9,23 @@ account for. For the shell-level contract — exit statuses, the meaning of an
 empty answer, waiting for late answers — see
 [ScriptingGuide.md](ScriptingGuide.md).
 
+## Setting an agent up
+
+    tnotify config claude
+
+installs the skill where Claude Code reads it and adds tnotify to its standing
+permissions, so it can ask through the popup without a confirmation prompt
+first. `codex`, `copilot` and `antigravity` work the same way, and several can
+be named at once. Running it again changes nothing, and the rest of the agent's
+settings are left as they were. A settings file that is not valid JSON is
+reported and left untouched.
+
+Copilot CLI only saves approvals per repository, in a file it manages itself,
+so for Copilot the skill is installed and the launch flag is printed instead.
+
+The rest of this section is what `config` does, for setting an agent up by
+hand.
+
 ## The skill
 
 The skill is the agent-facing half of `tnotify`: it tells an agent when to reach
@@ -45,8 +62,8 @@ What each permission file wants:
     # Antigravity — ~/.gemini/antigravity-cli/settings.json
     "permissions": { "allow": ["command(tnotify)"] }
 
-Copilot CLI writes its own permissions file and has no documented syntax for
-editing by hand, so the allowance is given at launch:
+Copilot CLI saves approvals only per repository, in a permissions file it
+rewrites itself, so the user-wide allowance is given at launch:
 
     copilot --allow-tool 'shell(tnotify)'
 
