@@ -10,9 +10,10 @@ permissions:
   contents: read
 
 concurrency:
-  # pull requests share a group per branch so newer pushes replace older runs; each commit on main
-  # gets its own group, since a pending run in a shared group is dropped and its tag would be skipped
-  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  # pull requests share a group per branch so newer pushes replace older runs; pushes to main share one
+  # group so releases go out in order, and a run dropped while pending is covered by the next, which
+  # releases every commit since the last tag
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -24,32 +25,67 @@ env:
 jobs:
   version:
     runs-on: ubuntu-26.04
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      released: ${{ steps.next.outputs.released }}
+      commits: ${{ steps.next.outputs.commits }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # full history, so every existing release tag is available to compare against
+          # full history and tags, to find the last release and every commit since
           fetch-depth: 0
-      - name: VERSION holds a single vX.Y.Z version
+      - id: next
+        name: Work out the version from the commits since the last release
         run: |
-          if ! grep -Eqx 'v[0-9]+\.[0-9]+\.[0-9]+' VERSION || [ "$(grep -c "" VERSION)" -ne 1 ]; then
-            echo "::error file=VERSION::VERSION must be one line of the form vX.Y.Z"
-            exit 1
-          fi
-      - name: VERSION is higher than every release tag
-        run: |
-          version=$(tr -d '[:space:]' < VERSION)
-          latest=$(git tag --list --sort=-v:refname | { grep -Ex 'v[0-9]+\.[0-9]+\.[0-9]+' || true; } | sed -n 1p)
-          if [ -n "$latest" ]; then
-            highest=$(printf '%s\n' "$latest" "$version" | sort -V | tail -n 1)
-            if [ "$version" = "$latest" ] || [ "$highest" != "$version" ]; then
-              echo "::error file=VERSION::VERSION is $version but $latest is already released; bump it above $latest"
-              exit 1
+          pattern='v[0-9]+\.[0-9]+\.[0-9]+'
+          latest=$(git tag --list --sort=-v:refname | { grep -Ex "$pattern" || true; } | sed -n 1p)
+          current=$(git tag --points-at HEAD | { grep -Ex "$pattern" || true; } | sort -V | tail -n 1)
+
+          released=false
+          if [ -n "$current" ]; then
+            # a re-run on a commit that is already released
+            released=true
+            version=${current#v}
+            bump="already released"
+          elif [ -z "$latest" ]; then
+            version=0.1.0
+            bump="first release"
+          else
+            IFS=. read -r major minor patch <<< "${latest#v}"
+            subjects=$(git log --no-merges --format=%s "$latest..HEAD")
+            bodies=$(git log --no-merges --format=%b "$latest..HEAD")
+            if grep -Eq '^[a-z]+(\([^)]*\))?!:' <<< "$subjects" || grep -Eq '^BREAKING[ -]CHANGE:' <<< "$bodies"; then
+              version="$((major + 1)).0.0"
+              bump="X, for a breaking change"
+            elif grep -Eq '^feat(\([^)]*\))?:' <<< "$subjects"; then
+              version="$major.$((minor + 1)).0"
+              bump="Y, for a feat commit"
+            else
+              version="$major.$minor.$((patch + 1))"
+              bump="Z"
             fi
           fi
 
+          # each first-parent commit since the last release is one merge to main, so one set of notes
+          if [ -n "$latest" ]; then
+            commits=$(git rev-list --first-parent "$latest..HEAD" | tr '\n' ' ')
+          else
+            commits=$(git rev-parse HEAD)
+          fi
+
+          {
+            echo "version=$version"
+            echo "released=$released"
+            echo "commits=$commits"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice title=Version::v$version ($bump)"
+
   checks:
+    needs: version
     runs-on: ubuntu-26.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,13 +103,13 @@ jobs:
       - name: Start the dev container
         run: devcontainer up --workspace-folder .
       - name: Format
-        run: devcontainer exec --workspace-folder . make format-dry-run
+        run: devcontainer exec --workspace-folder . make format-dry-run VERSION="$VERSION"
       - name: Build
-        run: devcontainer exec --workspace-folder . make build
+        run: devcontainer exec --workspace-folder . make build VERSION="$VERSION"
       - name: Test
-        run: devcontainer exec --workspace-folder . make test
+        run: devcontainer exec --workspace-folder . make test VERSION="$VERSION"
       - name: Release build
-        run: devcontainer exec --workspace-folder . make release
+        run: devcontainer exec --workspace-folder . make release VERSION="$VERSION"
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -83,20 +119,15 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && needs.version.outputs.released != 'true'
     needs: [version, checks]
     runs-on: ubuntu-26.04
     permissions:
       # publishes the release, which also creates its tag
       contents: write
-      # reads the merged pull request's description for the release notes
+      # reads the merged pull requests' descriptions for the release notes
       pull-requests: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - id: version
-        run: echo "tag=$(tr -d "[:space:]" < VERSION)" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           # a pattern rather than a name, so a missing artifact means no files instead of a failure
@@ -105,19 +136,36 @@ jobs:
           path: dist
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: v${{ needs.version.outputs.version }}
+          COMMITS: ${{ needs.version.outputs.commits }}
         with:
           script: |
             const fs = require('fs');
             const path = require('path');
             const tag = process.env.TAG;
 
-            const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              ...context.repo,
-              commit_sha: context.sha,
-            });
-            const merged = pulls.find(pull => pull.merge_commit_sha === context.sha) ?? pulls.find(pull => pull.merged_at);
-            const notes = merged?.body || context.payload.head_commit?.message || '';
+            // newest first; a pull request merged by rebase owns several commits but is listed once
+            const sections = [];
+            const listed = new Set();
+            for (const sha of process.env.COMMITS.split(' ').filter(Boolean)) {
+              const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                ...context.repo,
+                commit_sha: sha,
+              });
+              const merged = pulls.find(pull => pull.merge_commit_sha === sha) ?? pulls.find(pull => pull.merged_at);
+              if (merged) {
+                if (listed.has(merged.number)) continue;
+                listed.add(merged.number);
+                sections.push({ title: `${merged.title} (#${merged.number})`, body: merged.body || '' });
+              } else {
+                const { data: commit } = await github.rest.git.getCommit({ ...context.repo, commit_sha: sha });
+                const [title, ...rest] = commit.message.split('\n');
+                sections.push({ title, body: rest.join('\n') });
+              }
+            }
+            const notes = sections.length === 1
+              ? sections[0].body.trim() || sections[0].title
+              : sections.map(section => `### ${section.title}\n\n${section.body.trim()}`.trim()).join('\n\n');
 
             const files = fs.existsSync('dist')
               ? fs.readdirSync('dist', { withFileTypes: true }).filter(entry => entry.isFile()).map(entry => entry.name)

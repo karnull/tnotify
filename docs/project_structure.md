@@ -15,7 +15,7 @@ window with the `--internal` marker, and the copy outside waits for the answer.
 | `internal/`           | Command line parsing, dispatch, config, the notification store, waiting callers and help |
 | `pkg/`                | tmux control and the bubbletea models for notifications and the side panel |
 | `resources/`          | Embedded default config and agent skill                    |
-| `version.go`, `VERSION` | The release version, embedded from `VERSION`             |
+| `version.go`          | The release version, stamped in at build time              |
 | `scripts/release.sh`  | Cross-compiles the release targets into `dist/`            |
 | `.github/`            | Shared CI, and the workflow that keeps the Homebrew formula current |
 | `AgentGuide.md`, `ScriptingGuide.md` | Guides for agents and for scripts           |

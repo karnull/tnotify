@@ -10,7 +10,7 @@ import (
 	"github.com/karnull/tnotify"
 )
 
-// The release version, embedded from VERSION at the module root.
+// The release version, stamped in at build time.
 var Version = tnotify.Version
 
 //go:embed default.toml

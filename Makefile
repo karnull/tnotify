@@ -3,6 +3,10 @@
 NAME := tnotify
 RELEASE_TARGETS := linux-arm64 linux-x64 macOS-intel macOS-apple-silicon
 
+# CI passes the release version; it reaches every go build, scripts/release.sh included
+VERSION ?= dev
+export GOFLAGS := -ldflags=-X=github.com/karnull/tnotify.Version=$(VERSION)
+
 .PHONY: build format format-dry-run test release
 
 build:

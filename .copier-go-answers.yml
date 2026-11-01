@@ -1,7 +1,7 @@
 
 # .copier-go-answers.yml.jinja
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v2.1.1
+_commit: v4.0.0
 _src_path: gh:karshosphere/template-go
 app_type: TUI
 include_database: false

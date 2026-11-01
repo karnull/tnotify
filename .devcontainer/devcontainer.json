@@ -19,7 +19,7 @@
 
     "mounts": [
         "type=bind,source=/etc/localtime,target=/etc/localtime,readonly",
-        "source=${localWorkspaceFolder}/.devcontainer/.bash_history,target=/home/vscode/.bash_history,type=bind,consistency=cached"
+        "source=${localWorkspaceFolder}/.devcontainer/.bash_history,target=/home/user/.bash_history,type=bind,consistency=cached"
     ],
 }
 
