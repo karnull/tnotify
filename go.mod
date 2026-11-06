@@ -13,7 +13,7 @@ require (
 	github.com/jubnzv/go-tmux v0.0.0-20240808014214-bf465a395e96
 	github.com/tidwall/gjson v1.20.0
 	github.com/tidwall/pretty v1.2.2
-	github.com/tidwall/sjson v1.2.5
+	github.com/tidwall/sjson v1.2.7
 )
 
 require (
