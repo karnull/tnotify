@@ -11,9 +11,9 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/jubnzv/go-tmux v0.0.0-20240808014214-bf465a395e96
-	github.com/tidwall/gjson v1.20.1
-	github.com/tidwall/pretty v1.2.2
-	github.com/tidwall/sjson v1.2.5
+	github.com/tidwall/gjson v1.20.2
+	github.com/tidwall/pretty v1.3.0
+	github.com/tidwall/sjson v1.2.9
 )
 
 require (
