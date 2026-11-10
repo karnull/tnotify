@@ -1,19 +1,19 @@
 module github.com/karnull/tnotify
 
-go 1.26.5
+go 1.26.7
 
 require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.1.1
-	charm.land/lipgloss/v2 v2.0.6
+	charm.land/lipgloss/v2 v2.1.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/jubnzv/go-tmux v0.0.0-20240808014214-bf465a395e96
-	github.com/tidwall/gjson v1.20.1
-	github.com/tidwall/pretty v1.2.2
-	github.com/tidwall/sjson v1.2.5
+	github.com/tidwall/gjson v1.20.2
+	github.com/tidwall/pretty v1.3.0
+	github.com/tidwall/sjson v1.2.9
 )
 
 require (
