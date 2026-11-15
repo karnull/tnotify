@@ -18,9 +18,9 @@ concurrency:
 
 env:
   # renovate: datasource=node-version depName=node
-  NODE_VERSION: 24.22.0
+  NODE_VERSION: 26.13.0
   # renovate: datasource=npm depName=@devcontainers/cli
-  DEVCONTAINER_CLI_VERSION: 0.89.0
+  DEVCONTAINER_CLI_VERSION: 0.90.0
 
 jobs:
   version:
